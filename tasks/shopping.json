@@ -1,0 +1,12 @@
+{
+  "id": "shopping",
+  "goal": "Search for a product and add a visible result to cart.",
+  "start_url": "https://www.saucedemo.com/",
+  "actions": [
+    {"type": "type", "target": "Username", "text": "standard_user"},
+    {"type": "type", "target": "Password", "text": "secret_sauce"},
+    {"type": "click", "target": "Login"},
+    {"type": "click", "target": "Add to cart"}
+  ],
+  "success_hint": "Cart badge appears or cart item count increases."
+}

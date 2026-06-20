@@ -1,0 +1,11 @@
+{
+  "id": "docs_search",
+  "goal": "Open a documentation page and use keyboard navigation/search-like actions.",
+  "start_url": "https://example.com",
+  "actions": [
+    {"type": "wait", "amount": 500},
+    {"type": "press", "key": "Tab"},
+    {"type": "press", "key": "Enter"}
+  ],
+  "success_hint": "Navigation or focus state changes are visible in compact observations."
+}
