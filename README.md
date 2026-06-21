@@ -149,6 +149,30 @@ python scripts/eval_suite.py --predictor llm --compare --baseline-context full_s
 Task JSON resolves its `id` to `runs/<id>`; suite JSON can also pass a `runs`
 list of run folders.
 
+### Arize AX tracing
+
+BrowserDelta can emit Arize traces for replay evals and live BrowserGym evals.
+Install the optional dependencies and set `ARIZE_API_KEY`, `ARIZE_SPACE_ID`, and
+optionally `ARIZE_PROJECT_NAME` in `.env`:
+
+```bash
+pip install -e ".[observability]"
+python scripts/eval_run.py runs/local_checkout --predictor llm --compare --arize
+python scripts/eval_suite.py --predictor llm --compare --arize runs/local_checkout runs/browserbase_checkout
+```
+
+For the live external-eval demo, pass `--arize` to the BrowserGym runner:
+
+```bash
+PYTHONPATH=$PWD/backend .venv-browsergym/bin/python scripts/run_browsergym_live.py \
+  artifacts/failure-loop/combined50-hard-cases.json \
+  --modes compact,full_state \
+  --policy llm \
+  --headless \
+  --retries 1 \
+  --arize
+```
+
 Run the checked-in smoke fixture:
 
 ```bash

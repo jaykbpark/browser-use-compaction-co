@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
 
 from browserdelta.eval.runner import evaluate_comparison, evaluate_run  # noqa: E402
+from browserdelta.observability.arize import ArizeEvalTracer, start_arize_tracing  # noqa: E402
 from browserdelta.schemas import EvalComparisonReport, ReplayReport  # noqa: E402
 
 
@@ -41,15 +42,24 @@ def main(argv: list[str] | None = None) -> int:
         choices=["full_state", "vision_full_state"],
         help="Baseline context mode to use with --compare.",
     )
+    parser.add_argument("--arize", action="store_true", help="Emit Arize AX traces.")
+    parser.add_argument("--arize-project", help="Override ARIZE_PROJECT_NAME for this suite.")
     parser.add_argument("--json", action="store_true", help="Print the suite summary as JSON.")
     args = parser.parse_args(argv)
+    tracer = start_arize_tracing(args.arize, project_name=args.arize_project)
+    if args.arize and not tracer.enabled:
+        print(f"Arize tracing disabled: {tracer.reason}", file=sys.stderr)
 
-    suite = evaluate_suite(
-        args.inputs,
-        predictor=args.predictor,
-        compare=args.compare,
-        baseline_context_mode=args.baseline_context,  # type: ignore[arg-type]
-    )
+    try:
+        suite = evaluate_suite(
+            args.inputs,
+            predictor=args.predictor,
+            compare=args.compare,
+            baseline_context_mode=args.baseline_context,  # type: ignore[arg-type]
+            arize_tracer=tracer,
+        )
+    finally:
+        tracer.flush()
 
     if args.json:
         print(json.dumps(suite, indent=2))
@@ -64,10 +74,16 @@ def evaluate_suite(
     root: Path | None = None,
     compare: bool = False,
     baseline_context_mode: str = "vision_full_state",
+    arize_tracer: ArizeEvalTracer | None = None,
 ) -> dict[str, Any]:
     root = root or ROOT
     targets = expand_targets(inputs, root=root)
     if compare:
+        comparison_kwargs = (
+            {"arize_tracer": arize_tracer}
+            if arize_tracer is not None and arize_tracer.enabled
+            else {}
+        )
         rows = [
             summarize_comparison(
                 evaluate_comparison(
@@ -75,6 +91,7 @@ def evaluate_suite(
                     goal=target.goal,
                     predictor=predictor,
                     baseline_context_mode=baseline_context_mode,  # type: ignore[arg-type]
+                    **comparison_kwargs,
                 )
             )
             for target in targets
@@ -87,8 +104,20 @@ def evaluate_suite(
             "summary": summarize_comparison_rows(rows),
         }
 
+    run_kwargs = (
+        {"arize_tracer": arize_tracer}
+        if arize_tracer is not None and arize_tracer.enabled
+        else {}
+    )
     rows = [
-        summarize_report(evaluate_run(target.run_path, goal=target.goal, predictor=predictor))
+        summarize_report(
+            evaluate_run(
+                target.run_path,
+                goal=target.goal,
+                predictor=predictor,
+                **run_kwargs,
+            )
+        )
         for target in targets
     ]
     return {

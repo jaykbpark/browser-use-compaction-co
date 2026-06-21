@@ -1,0 +1,27 @@
+You are evaluating a BrowserDelta replay-eval step span.
+
+BrowserDelta compresses browser-agent observations. The evaluator should decide
+whether the compact observation preserved the next browser action while reducing
+token load.
+
+The span input is JSON with the previous action, expected next action,
+observation summary, route, and fallback:
+
+{input}
+
+The span output is JSON with the evaluator result, predicted next action,
+compact token estimate, baseline token estimate, and reduction percentage:
+
+{output}
+
+Choose exactly one label:
+
+- preserved_high_compression: output.passed is true and reduction_pct is at least 70.
+- preserved_low_compression: output.passed is true but reduction_pct is positive and below 70.
+- preserved_no_compression: output.passed is true but reduction_pct is zero or missing.
+- regressed_next_action: output.passed is false or the predicted next action does not match the expected next action.
+- missing_eval_data: required fields are absent or unparsable.
+
+Prefer the explicit output.passed field when present. Use the predicted and
+expected actions only as a fallback if output.passed is missing. In the
+explanation, mention the route/fallback and the token reduction when available.

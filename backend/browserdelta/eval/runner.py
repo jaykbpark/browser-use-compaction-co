@@ -6,6 +6,7 @@ from browserdelta.compaction.codec import compact_run
 from browserdelta.compaction.metrics import estimate_raw_baseline_tokens, estimate_text_tokens
 from browserdelta.eval.agent_judge import HeuristicReplayAgent, actions_match
 from browserdelta.eval.llm_agent import LLMReplayAgent
+from browserdelta.observability.arize import ArizeEvalTracer, noop_arize_tracer
 from browserdelta.schemas import (
     BrowserAction,
     CompactObservation,
@@ -37,6 +38,7 @@ def evaluate_run(
     predictor: str = "heuristic",
     context_mode: ReplayContextMode = "compact",
     write_report: bool = True,
+    arize_tracer: ArizeEvalTracer | None = None,
 ) -> ReplayReport:
     if context_mode not in _CONTEXT_MODES:
         raise ValueError(
@@ -48,64 +50,82 @@ def evaluate_run(
     observations_by_step = {observation.step: observation for observation in observations}
     manifest = _read_manifest_if_present(run_path)
     effective_goal = goal or _goal_from_manifest(manifest)
+    run_id = manifest.run_id if manifest else run_path.name
+    trace = arize_tracer or noop_arize_tracer()
 
     agent = _make_agent(predictor, context_mode=context_mode, run_path=run_path)
     results: list[ReplayStepResult] = []
 
-    for index, step in enumerate(steps[:-1]):
-        observation = observations_by_step.get(step.step)
-        if observation is None:
-            continue
-
-        expected_next_action = steps[index + 1].action
-        prediction = agent.predict_next_action(
-            effective_goal,
-            observation,
-            previous_action=step.action,
-            action_history=[record.action for record in steps[: index + 1]],
-        )
-        predicted_action = _resolve_target_alias(
-            prediction.action,
-            observation,
-            expected_next_action=expected_next_action,
-        )
-        passed, reason = actions_match(predicted_action, expected_next_action)
-
-        results.append(
-            ReplayStepResult(
-                step=step.step,
-                context_mode=context_mode,
-                observation_summary=observation.summary,
-                expected_next_action=expected_next_action,
-                predicted_next_action=predicted_action,
-                passed=passed,
-                match_reason=reason,
-                rationale=prediction.rationale,
-                confidence=prediction.confidence,
-                route=observation.route,
-                fallback=observation.fallback,
-                tokens_estimate=observation.tokens_estimate,
-                baseline_tokens_estimate=observation.baseline_tokens_estimate,
-                reduction_pct=observation.reduction_pct,
-            )
-        )
-
-    report = ReplayReport(
-        run_id=manifest.run_id if manifest else run_path.name,
-        predictor=agent.name,
+    with trace.run_span(
+        run_id=run_id,
+        run_path=run_path,
+        predictor=predictor,
         context_mode=context_mode,
-        evaluated_steps=len(results),
-        passed_steps=sum(1 for result in results if result.passed),
-        next_action_accuracy=_accuracy(results),
-        compact_tokens=sum(result.tokens_estimate for result in results),
-        baseline_tokens=sum(result.baseline_tokens_estimate for result in results),
-        avg_reduction_pct=_avg_reduction(results),
-        steps=results,
-    )
+        goal=effective_goal,
+    ) as run_span:
+        for index, step in enumerate(steps[:-1]):
+            observation = observations_by_step.get(step.step)
+            if observation is None:
+                continue
 
-    if write_report:
-        write_eval_report(run_path, report)
-    return report
+            expected_next_action = steps[index + 1].action
+            with trace.step_span(
+                run_id=run_id,
+                context_mode=context_mode,
+                step=step.step,
+                observation=observation,
+                expected_next_action=expected_next_action,
+                previous_action=step.action,
+            ) as step_span:
+                prediction = agent.predict_next_action(
+                    effective_goal,
+                    observation,
+                    previous_action=step.action,
+                    action_history=[record.action for record in steps[: index + 1]],
+                )
+                predicted_action = _resolve_target_alias(
+                    prediction.action,
+                    observation,
+                    expected_next_action=expected_next_action,
+                )
+                passed, reason = actions_match(predicted_action, expected_next_action)
+
+                result = ReplayStepResult(
+                    step=step.step,
+                    context_mode=context_mode,
+                    observation_summary=observation.summary,
+                    expected_next_action=expected_next_action,
+                    predicted_next_action=predicted_action,
+                    passed=passed,
+                    match_reason=reason,
+                    rationale=prediction.rationale,
+                    confidence=prediction.confidence,
+                    route=observation.route,
+                    fallback=observation.fallback,
+                    tokens_estimate=observation.tokens_estimate,
+                    baseline_tokens_estimate=observation.baseline_tokens_estimate,
+                    reduction_pct=observation.reduction_pct,
+                )
+                trace.record_step(step_span, result)
+                results.append(result)
+
+        report = ReplayReport(
+            run_id=run_id,
+            predictor=agent.name,
+            context_mode=context_mode,
+            evaluated_steps=len(results),
+            passed_steps=sum(1 for result in results if result.passed),
+            next_action_accuracy=_accuracy(results),
+            compact_tokens=sum(result.tokens_estimate for result in results),
+            baseline_tokens=sum(result.baseline_tokens_estimate for result in results),
+            avg_reduction_pct=_avg_reduction(results),
+            steps=results,
+        )
+        trace.record_report(run_span, report)
+
+        if write_report:
+            write_eval_report(run_path, report)
+        return report
 
 
 def evaluate_comparison(
@@ -114,6 +134,7 @@ def evaluate_comparison(
     predictor: str = "llm",
     baseline_context_mode: ReplayContextMode = "vision_full_state",
     write_report: bool = True,
+    arize_tracer: ArizeEvalTracer | None = None,
 ) -> EvalComparisonReport:
     if baseline_context_mode == "compact":
         raise ValueError(
@@ -122,34 +143,46 @@ def evaluate_comparison(
     if baseline_context_mode not in _CONTEXT_MODES:
         raise ValueError("Unknown baseline_context_mode. Expected full_state or vision_full_state.")
 
-    compact = evaluate_run(
-        run_path,
-        goal=goal,
+    trace = arize_tracer or noop_arize_tracer()
+    manifest = _read_manifest_if_present(run_path)
+    effective_goal = goal or _goal_from_manifest(manifest)
+    with trace.comparison_span(
+        run_path=run_path,
         predictor=predictor,
-        context_mode="compact",
-        write_report=write_report,
-    )
-    baseline = evaluate_run(
-        run_path,
-        goal=goal,
-        predictor=predictor,
-        context_mode=baseline_context_mode,
-        write_report=write_report,
-    )
-    summary = _comparison_summary(compact, baseline)
-    report = EvalComparisonReport(
-        run_id=compact.run_id,
-        predictor=compact.predictor,
-        compact=compact,
-        baseline=baseline,
-        summary=summary,
-        verdict=_comparison_verdict(summary),
-        explanation=_comparison_explanation(summary),
-    )
-    if write_report:
-        write_eval_comparison_report(run_path, report)
-        _write_eval_summary_markdown(run_path, report)
-    return report
+        baseline_context_mode=baseline_context_mode,
+        goal=effective_goal,
+    ) as comparison_span:
+        compact = evaluate_run(
+            run_path,
+            goal=goal,
+            predictor=predictor,
+            context_mode="compact",
+            write_report=write_report,
+            arize_tracer=trace,
+        )
+        baseline = evaluate_run(
+            run_path,
+            goal=goal,
+            predictor=predictor,
+            context_mode=baseline_context_mode,
+            write_report=write_report,
+            arize_tracer=trace,
+        )
+        summary = _comparison_summary(compact, baseline)
+        report = EvalComparisonReport(
+            run_id=compact.run_id,
+            predictor=compact.predictor,
+            compact=compact,
+            baseline=baseline,
+            summary=summary,
+            verdict=_comparison_verdict(summary),
+            explanation=_comparison_explanation(summary),
+        )
+        trace.record_comparison(comparison_span, report)
+        if write_report:
+            write_eval_comparison_report(run_path, report)
+            _write_eval_summary_markdown(run_path, report)
+        return report
 
 
 def _read_observations(

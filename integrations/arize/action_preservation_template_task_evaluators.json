@@ -1,0 +1,10 @@
+[
+  {
+    "evaluator_id": "RXZhbHVhdG9yOjk0MTQ6Zm1ZOQ==",
+    "column_mappings": {
+      "input": "attributes.input.value",
+      "output": "attributes.output.value"
+    },
+    "query_filter": "attributes.openinference.span.kind = 'EVALUATOR'"
+  }
+]

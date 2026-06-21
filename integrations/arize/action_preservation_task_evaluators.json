@@ -1,0 +1,15 @@
+[
+  {
+    "evaluator_id": "REPLACE_WITH_EVALUATOR_ID",
+    "column_mappings": {
+      "passed": "attributes.browserdelta.passed",
+      "compact_tokens": "attributes.browserdelta.compact_tokens",
+      "baseline_tokens": "attributes.browserdelta.baseline_tokens",
+      "reduction_pct": "attributes.browserdelta.reduction_pct",
+      "route": "attributes.browserdelta.route",
+      "fallback": "attributes.browserdelta.fallback",
+      "match_reason": "attributes.browserdelta.match_reason"
+    },
+    "query_filter": "attributes.openinference.span.kind = 'EVALUATOR'"
+  }
+]

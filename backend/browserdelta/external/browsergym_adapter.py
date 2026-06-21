@@ -67,11 +67,13 @@ class BrowserGymUnavailable(ImportError):
     """Raised when BrowserGym-backed recording is requested but unavailable."""
 
 
-def require_browsergym() -> Any:
+def require_browsergym(extra_modules: list[str] | None = None) -> Any:
     try:
         import gymnasium as gym  # noqa: F401
         import browsergym.core  # noqa: F401
         import browsergym.miniwob  # noqa: F401
+        for module in extra_modules or []:
+            __import__(module)
     except ImportError as exc:
         raise BrowserGymUnavailable(INSTALL_HINT) from exc
 
@@ -119,7 +121,7 @@ def axtree_to_interactive(
             InteractiveElement(
                 ref=ref,
                 role=role or "generic",
-                name=_node_value(node, "name"),
+                name=_node_name(node),
                 value=value or None,
                 disabled=_bool_prop(node, "disabled"),
                 checked=_bool_prop(node, "checked"),
@@ -138,7 +140,7 @@ def axtree_to_text(axtree: dict[str, Any]) -> list[str]:
         role = _node_value(node, "role")
         if role in {"", "generic", "none", "presentation", "InlineTextBox"}:
             continue
-        name = _node_value(node, "name").strip()
+        name = _node_name(node).strip()
         if name:
             lines.append(name)
     return lines
@@ -162,6 +164,22 @@ def parse_browsergym_action(action: str | None) -> BrowserAction:
         url=target if action_type == "goto" else None,
         metadata={"raw_action": text, "source": "browsergym"},
     )
+
+
+def format_browsergym_action(action: BrowserAction) -> str:
+    if action.type == "wait":
+        return "noop()"
+    if action.type == "goto":
+        return f"goto({_quote(action.url or action.target or '')})"
+    if action.type == "type":
+        return f"fill({_quote(action.target or '')}, {_quote(action.text or '')})"
+    if action.type == "press":
+        if action.target:
+            return f"press({_quote(action.target)}, {_quote(action.key or 'Enter')})"
+        return f"keyboard_press({_quote(action.key or 'Enter')})"
+    if action.type == "scroll":
+        return f"scroll(0, {int(action.amount or 0)})"
+    return f"click({_quote(action.target or '')})"
 
 
 def noop_policy(_obs: dict[str, Any]) -> str:
@@ -218,10 +236,10 @@ def record_episode(
             else:
                 action_text = choose_action(obs)
 
-            before = _write_state(run_path, step_number, "before", obs)
+            before = write_browsergym_state(run_path, step_number, "before", obs)
             step_out = env.step(action_text)
             obs, reward, terminated, truncated, info = _unpack_step(step_out)
-            after = _write_state(run_path, step_number, "after", obs)
+            after = write_browsergym_state(run_path, step_number, "after", obs)
             success = success or bool(info.get("success") or reward > 0)
 
             append_jsonl(
@@ -255,13 +273,22 @@ def record_episode(
     return run_path
 
 
-def _write_state(run_path: Path, step: int, when: str, obs: dict[str, Any]) -> StatePointer:
+def write_browsergym_state(
+    run_path: Path,
+    step: int,
+    when: str,
+    obs: dict[str, Any],
+) -> StatePointer:
     screenshot_rel = f"steps/step_{step:03d}_{when}.png"
     state_rel = f"steps/step_{step:03d}_{when}.json"
     has_screenshot = _save_screenshot(obs.get("screenshot"), run_path / screenshot_rel)
     state = observation_to_page_state(obs, screenshot=screenshot_rel if has_screenshot else None)
     write_json(run_path / state_rel, state)
     return StatePointer(screenshot=screenshot_rel if has_screenshot else "", state=state_rel)
+
+
+def _quote(value: str) -> str:
+    return repr(str(value))
 
 
 def _save_screenshot(value: Any, path: Path) -> bool:
@@ -339,6 +366,25 @@ def _node_value(node: dict[str, Any], key: str) -> str:
     if isinstance(value, dict):
         return str(value.get("value") or "")
     return str(value or "")
+
+
+def _node_name(node: dict[str, Any]) -> str:
+    name = _node_value(node, "name")
+    if name.strip():
+        return name
+
+    raw_name = node.get("name")
+    if not isinstance(raw_name, dict):
+        return name
+    for source in raw_name.get("sources") or []:
+        if not isinstance(source, dict) or source.get("type") != "contents":
+            continue
+        value = source.get("value") or {}
+        if isinstance(value, dict):
+            candidate = str(value.get("value") or "").strip()
+            if candidate:
+                return candidate
+    return name
 
 
 def _property_map(node: dict[str, Any]) -> dict[str, Any]:

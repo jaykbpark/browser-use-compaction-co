@@ -74,3 +74,74 @@ task fixed:
 
 The metrics to show are task success or next-action parity, compact-vs-baseline
 accuracy, estimated token savings, and failure examples.
+
+## Live Agent Eval: Three Phases
+
+The live path holds the task and agent fixed, then swaps only the observation
+that the agent sees:
+
+- `compact`: BrowserDelta compact observation after each action.
+- `full_state`: uncompressed current page state and screenshot pointer.
+- `vision_full_state`: uncompressed current page state plus attached screenshot
+  image for model-backed policies.
+
+Phase 1 is a small MiniWoB live smoke:
+
+```bash
+PYTHONPATH=$PWD/backend .venv-browsergym/bin/python scripts/run_browsergym_live.py \
+  --env browsergym/miniwob.click-button \
+  --modes compact,full_state \
+  --policy llm \
+  --headless \
+  --max-steps 10
+```
+
+Phase 2 is the scaled MiniWoB run. Pass a suite JSON or let the script discover
+registered MiniWoB envs and cap with `--limit 50`. The output JSON includes
+raw runs, a failure table, and a chart-ready `charts` object:
+
+```bash
+PYTHONPATH=$PWD/backend .venv-browsergym/bin/python scripts/run_browsergym_live.py \
+  docs/browsergym-live-suite.example.json \
+  --modes compact,full_state \
+  --policy llm \
+  --headless \
+  --limit 50 \
+  --retries 1
+```
+
+Phase 3 is optional WorkArena. Probe first; if WorkArena is not installed, the
+script returns a clean availability report instead of breaking normal CI:
+
+```bash
+PYTHONPATH=$PWD/backend .venv-browsergym/bin/python scripts/run_browsergym_live.py \
+  --probe-workarena
+```
+
+## Failure Loop
+
+After a scaled run, turn the report's failure table into a focused rerun suite.
+This is the fastest way to show whether a compaction improvement fixed the hard
+cases without paying to rerun the whole benchmark.
+
+Default hard-case loop: compact regressions plus tasks where both modes failed.
+
+```bash
+python3 scripts/build_failure_suite.py \
+  reports/external/browsergym-live-miniwob_llm_combined50_20260621T054656Z.json \
+  --out artifacts/failure-loop/combined50-hard-cases.json
+```
+
+Then rerun only those cases:
+
+```bash
+PYTHONPATH=$PWD/backend .venv-browsergym/bin/python scripts/run_browsergym_live.py \
+  artifacts/failure-loop/combined50-hard-cases.json \
+  --modes compact,full_state \
+  --policy llm \
+  --headless \
+  --retries 1
+```
+
+For a demo-positive loop that also includes cases where compact beat the
+baseline, add `--all-non-success` when building the suite.
