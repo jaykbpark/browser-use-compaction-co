@@ -8,8 +8,6 @@ import {
   Gauge,
   Image,
   Loader2,
-  RefreshCw,
-  Zap,
 } from "lucide-react";
 import "./styles.css";
 
@@ -165,7 +163,7 @@ type RunDetail = {
   eval_comparison?: EvalComparisonReport | null;
 };
 
-type BusyAction = "compact" | "evaluate" | "compare" | null;
+type BusyAction = "compare" | null;
 
 const numberFormatter = new Intl.NumberFormat("en-US");
 const RUN_LABELS: Record<string, string> = {
@@ -336,18 +334,6 @@ function App() {
           <button
             type="button"
             onClick={() =>
-              void runAction("compact", () =>
-                fetch(`/api/runs/${encodeURIComponent(selectedRun)}/compact`, { method: "POST" }),
-              )
-            }
-            disabled={!selectedRun || busy !== null}
-          >
-            {busy === "compact" ? <Loader2 className="spin" size={16} /> : <Zap size={16} />}
-            Build BrowserDelta view
-          </button>
-          <button
-            type="button"
-            onClick={() =>
               void runAction("compare", () =>
                 fetch(
                   `/api/runs/${encodeURIComponent(
@@ -360,11 +346,7 @@ function App() {
             disabled={!selectedRun || busy !== null}
           >
             {busy === "compare" ? <Loader2 className="spin" size={16} /> : <Gauge size={16} />}
-            Compare full vs BrowserDelta
-          </button>
-          <button type="button" className="secondary" onClick={refreshRunList} disabled={busy !== null}>
-            <RefreshCw size={16} />
-            Reload
+            Run side-by-side eval
           </button>
         </div>
       </section>
@@ -555,7 +537,7 @@ function PayloadCard({
         <small>
           {step
             ? `${step.passed ? "pass" : "miss"} · ${formatPct(step.confidence * 100)} confidence`
-            : "run Compare to score this step"}
+            : "run the side-by-side eval to score this step"}
         </small>
       </div>
 
