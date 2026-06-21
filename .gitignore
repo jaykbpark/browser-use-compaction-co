@@ -20,5 +20,6 @@ runs/*
 **/compact_observations.jsonl
 **/crops/
 reports/
+artifacts/
 
 *.log
