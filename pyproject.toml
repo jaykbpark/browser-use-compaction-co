@@ -32,6 +32,9 @@ observability = [
   "opentelemetry-sdk>=1.42.0",
 ]
 
+[project.scripts]
+browserdelta = "browserdelta.cli:main"
+
 [tool.setuptools.packages.find]
 where = ["backend"]
 

@@ -86,6 +86,34 @@ button:disabled {
   gap: 10px;
 }
 
+.nav-links {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+}
+
+.nav-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.nav-links a[data-on="true"] {
+  background: var(--bg);
+  color: var(--ink);
+  box-shadow: 0 1px 5px rgba(16, 20, 40, 0.08);
+}
+
 .run-switch {
   display: inline-flex;
   align-items: center;
@@ -166,6 +194,159 @@ button.ghost:hover:not(:disabled) {
   color: var(--muted);
   font-size: 15px;
   line-height: 1.6;
+}
+
+/* ---- setup ---- */
+.setup-page {
+  height: auto;
+  min-height: 100vh;
+  overflow: visible;
+}
+
+.eyebrow {
+  margin-bottom: 10px;
+  color: var(--good);
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.setup-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 24px;
+  align-items: end;
+  padding: 52px 0 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.setup-hero h1 {
+  max-width: 760px;
+  font-size: 76px;
+  line-height: 0.95;
+  letter-spacing: 0;
+}
+
+.launch-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid var(--ink);
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--bg);
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.setup-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.75fr);
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.terminal-panel {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.terminal-panel.primary-terminal {
+  grid-row: span 2;
+}
+
+.terminal-panel > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0 14px;
+  border-bottom: 1px solid #243027;
+  background: #111813;
+  color: #ecf8ef;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.terminal-panel button {
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid rgba(236, 248, 239, 0.2);
+  border-radius: 7px;
+  background: rgba(236, 248, 239, 0.08);
+  color: #ecf8ef;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.terminal-panel pre {
+  flex: 1;
+  min-height: 124px;
+  margin: 0;
+  padding: 16px;
+  overflow: auto;
+  background:
+    linear-gradient(180deg, rgba(21, 127, 69, 0.08), transparent 36%),
+    #0d120f;
+  color: #d7f7df;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.75;
+  white-space: pre-wrap;
+}
+
+.terminal-panel.agent-panel p {
+  margin: 0;
+  padding: 14px 16px 16px;
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+.terminal-panel.agent-panel {
+  grid-column: 1 / -1;
+}
+
+.terminal-panel.agent-panel pre {
+  min-height: 76px;
+}
+
+.setup-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  margin-top: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.setup-strip div {
+  display: grid;
+  gap: 7px;
+  padding: 18px;
+  background: var(--panel);
+}
+
+.setup-strip strong {
+  font-size: 15px;
+}
+
+.setup-strip span {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 /* ---- hero ---- */
@@ -465,6 +646,31 @@ button.ghost:hover:not(:disabled) {
     height: auto;
     min-height: 100vh;
     overflow: visible;
+  }
+
+  .bar,
+  .bar-right,
+  .setup-hero {
+    align-items: flex-start;
+  }
+
+  .bar,
+  .bar-right {
+    flex-wrap: wrap;
+  }
+
+  .setup-hero,
+  .setup-grid,
+  .setup-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .setup-hero {
+    padding-top: 34px;
+  }
+
+  .setup-hero h1 {
+    font-size: 46px;
   }
 
   .layout {

@@ -58,16 +58,40 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 python -m playwright install chromium
+npm --prefix viewer install
 cp .env.example .env
 ```
 
-Run the API:
+Generate screenshot-rich local runs for the dashboard:
 
 ```bash
-uvicorn browserdelta.main:app --reload --app-dir backend
+browserdelta demo
 ```
 
-Record a local demo run:
+Start the API:
+
+```bash
+browserdelta serve
+```
+
+In another terminal, start the viewer:
+
+```bash
+npm --prefix viewer run dev -- --host 127.0.0.1 --port 5174
+```
+
+Open `http://127.0.0.1:5174/#dashboard`.
+
+The CLI command a browser agent should call is:
+
+```bash
+browserdelta observe local_checkout --step 3 --format json
+```
+
+It returns the compact observation, token estimates, and any crop screenshot
+paths for the selected browser step.
+
+Lower-level scripts are still available for debugging:
 
 ```bash
 python scripts/record_demo.py --url https://example.com --run-id smoke
@@ -316,6 +340,11 @@ scripts/
   compact_run.py    compact a saved raw run
   eval_run.py       score compact observations against recorded next actions
   eval_suite.py     batch replay eval across run folders or task files
+
+CLI:
+  browserdelta demo       generate screenshot-rich local dashboard runs
+  browserdelta observe    emit one compact observation for a CLI agent
+  browserdelta serve      run the FastAPI service
 
 tasks/
   local_checkout.json deterministic local proof task

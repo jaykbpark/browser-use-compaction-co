@@ -71,7 +71,122 @@ type RunDetail = {
   eval_comparison?: EvalComparisonReport | null;
 };
 
+type PageRoute = "setup" | "dashboard";
+
+const SETUP_COMMAND = `python3 -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+python -m playwright install chromium
+npm --prefix viewer install
+browserdelta demo`;
+
+const API_COMMAND = "browserdelta serve";
+const VIEWER_COMMAND = "npm --prefix viewer run dev -- --host 127.0.0.1 --port 5174";
+const AGENT_COMMAND = "browserdelta observe local_checkout --step 3 --format json";
+
 function App() {
+  const [route, setRoute] = React.useState<PageRoute>(readRoute);
+
+  React.useEffect(() => {
+    const onHashChange = () => setRoute(readRoute());
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
+
+  return route === "dashboard" ? <DashboardPage /> : <SetupPage />;
+}
+
+function SetupPage() {
+  const [copied, setCopied] = React.useState(false);
+
+  async function copySetup() {
+    try {
+      await navigator.clipboard.writeText(SETUP_COMMAND);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  return (
+    <main className="page setup-page">
+      <header className="bar">
+        <div className="wordmark">
+          BrowserDelta <span>· context compression for browser agents</span>
+        </div>
+        <nav className="nav-links" aria-label="Pages">
+          <a href="#setup" data-on="true">
+            Setup
+          </a>
+          <a href="#dashboard">Dashboard</a>
+        </nav>
+      </header>
+
+      <section className="setup-hero">
+        <div>
+          <p className="eyebrow">CLI agent install</p>
+          <h1>Paste once. Get compact browser observations.</h1>
+        </div>
+        <a className="launch-link" href="#dashboard">
+          Open dashboard
+        </a>
+      </section>
+
+      <section className="setup-grid">
+        <article className="terminal-panel primary-terminal">
+          <header>
+            <span>1. Setup local demo data</span>
+            <button onClick={copySetup}>{copied ? "Copied" : "Copy"}</button>
+          </header>
+          <pre>{SETUP_COMMAND}</pre>
+        </article>
+
+        <article className="terminal-panel">
+          <header>
+            <span>2. Start API</span>
+          </header>
+          <pre>{API_COMMAND}</pre>
+        </article>
+
+        <article className="terminal-panel">
+          <header>
+            <span>3. Start viewer</span>
+          </header>
+          <pre>{VIEWER_COMMAND}</pre>
+        </article>
+
+        <article className="terminal-panel agent-panel">
+          <header>
+            <span>Agent call</span>
+          </header>
+          <pre>{AGENT_COMMAND}</pre>
+          <p>
+            Your CLI agent shells out here after each browser action. It gets compact
+            JSON with the text delta, token estimate, and any crop screenshots.
+          </p>
+        </article>
+      </section>
+
+      <section className="setup-strip">
+        <div>
+          <strong>Record</strong>
+          <span>before and after screenshots plus page state</span>
+        </div>
+        <div>
+          <strong>Compact</strong>
+          <span>DOM diffs first, visual crops only when needed</span>
+        </div>
+        <div>
+          <strong>Observe</strong>
+          <span>JSON or agent text for Codex-style CLI loops</span>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+function DashboardPage() {
   const [runs, setRuns] = React.useState<string[]>([]);
   const [selectedRun, setSelectedRun] = React.useState("");
   const [detail, setDetail] = React.useState<RunDetail | null>(null);
@@ -147,6 +262,12 @@ function App() {
           BrowserDelta <span>· less context per step, same decisions</span>
         </div>
         <div className="bar-right">
+          <nav className="nav-links" aria-label="Pages">
+            <a href="#setup">Setup</a>
+            <a href="#dashboard" data-on="true">
+              Dashboard
+            </a>
+          </nav>
           {runs.length > 0 ? (
             <label className="run-switch">
               Run
@@ -409,6 +530,10 @@ async function loadRun(runId: string): Promise<RunDetail> {
 function fileUrl(runId: string, path: string) {
   const p = path.split("/").map(encodeURIComponent).join("/");
   return `/api/runs/${encodeURIComponent(runId)}/files/${p}`;
+}
+
+function readRoute(): PageRoute {
+  return window.location.hash === "#dashboard" ? "dashboard" : "setup";
 }
 
 createRoot(document.getElementById("root")!).render(<App />);

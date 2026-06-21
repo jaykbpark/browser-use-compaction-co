@@ -182,6 +182,9 @@ run folder. Resolve them as `runs/<run_id>/<path>` when reading files.
   pixel diff, connected regions, DOM-box alignment, SSIM/pHash metrics, optional
   OCR, and a router decision that chooses text, crop, or full screenshot.
 - Keep modules small and hackathon-readable.
+- Prefer the package CLI (`browserdelta demo`, `browserdelta observe`,
+  `browserdelta serve`) for demo setup and agent-facing workflows. Keep scripts
+  available for lower-level debugging and backwards-compatible test coverage.
 - If you change the run schema, update `docs/schemas.md` in the same change.
 
 ## Useful Commands
@@ -189,6 +192,9 @@ run folder. Resolve them as `runs/<run_id>/<path>` when reading files.
 ```bash
 pip install -e ".[dev]"
 python -m playwright install chromium
+browserdelta demo
+browserdelta observe local_checkout --step 3 --format json
+browserdelta serve
 uvicorn browserdelta.main:app --reload --app-dir backend
 python scripts/record_demo.py --url https://example.com --run-id smoke
 python scripts/record_demo.py --task tasks/local_checkout.json --run-id local_checkout --headless --compact --runtime local
