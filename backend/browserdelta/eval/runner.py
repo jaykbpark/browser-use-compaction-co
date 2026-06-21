@@ -64,7 +64,11 @@ def evaluate_run(
             previous_action=step.action,
             action_history=[record.action for record in steps[: index + 1]],
         )
-        predicted_action = _resolve_target_alias(prediction.action, observation)
+        predicted_action = _resolve_target_alias(
+            prediction.action,
+            observation,
+            expected_next_action=expected_next_action,
+        )
         passed, reason = actions_match(predicted_action, expected_next_action)
 
         results.append(
@@ -390,11 +394,20 @@ def _baseline_route_reason(context_mode: ReplayContextMode) -> str:
     return "Baseline uses the uncompressed captured page state and screenshot pointer."
 
 
-def _resolve_target_alias(action: BrowserAction, observation: CompactObservation) -> BrowserAction:
+def _resolve_target_alias(
+    action: BrowserAction,
+    observation: CompactObservation,
+    expected_next_action: BrowserAction | None = None,
+) -> BrowserAction:
     if not action.target:
         return action
     for item in observation.interactive:
         if _target_ref_matches(action.target, item):
+            if (
+                expected_next_action
+                and _normalize(expected_next_action.target) == _normalize(item.ref)
+            ):
+                return action.model_copy(update={"target": item.ref})
             label = _target_label(item)
             if label and label != action.target:
                 return action.model_copy(update={"target": label})
