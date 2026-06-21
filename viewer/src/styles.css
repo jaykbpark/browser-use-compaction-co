@@ -93,14 +93,6 @@ h3 {
   letter-spacing: 0;
 }
 
-.hero-copy {
-  max-width: 620px;
-  margin-bottom: 0;
-  color: #53615c;
-  font-size: 15px;
-  line-height: 1.42;
-}
-
 .hero-stats {
   display: flex;
   flex-wrap: wrap;

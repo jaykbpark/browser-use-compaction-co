@@ -301,10 +301,6 @@ function App() {
         <div>
           <p className="eyebrow">Replay evaluator</p>
           <h1>BrowserDelta replay</h1>
-          <p className="hero-copy">
-            Compare the full browser payload with the compact delta used to predict
-            the next action.
-          </p>
         </div>
         <div className="hero-stats" aria-label="Demo result">
           <span>
