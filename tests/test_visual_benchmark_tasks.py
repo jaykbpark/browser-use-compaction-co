@@ -62,9 +62,7 @@ def test_visual_benchmark_tasks_record_and_compact(task_id: str, tmp_path: Path)
     compact_path = run_path / "compact_observations.jsonl"
     assert compact_path.is_file()
 
-    observations = [
-        CompactObservation.model_validate(row) for row in read_jsonl(compact_path)
-    ]
+    observations = [CompactObservation.model_validate(row) for row in read_jsonl(compact_path)]
     assert len(observations) >= 3
     assert _has_visual_or_meaningful_change(observations)
 
@@ -75,9 +73,7 @@ def test_visual_benchmark_tasks_record_and_compact(task_id: str, tmp_path: Path)
         assert _has_change_type(observations, "success_message")
     elif task_id == "visual_swatch_picker":
         assert _has_change_type(observations, "element_checked_changed")
-        assert any(
-            item.checked for observation in observations for item in observation.interactive
-        )
+        assert any(item.checked for observation in observations for item in observation.interactive)
 
 
 def _has_visual_or_meaningful_change(observations: list[CompactObservation]) -> bool:
@@ -90,9 +86,7 @@ def _has_visual_or_meaningful_change(observations: list[CompactObservation]) -> 
     )
 
 
-def _assert_has_crop_with_context(
-    run_path: Path, observations: list[CompactObservation]
-) -> None:
+def _assert_has_crop_with_context(run_path: Path, observations: list[CompactObservation]) -> None:
     crop_observations = [
         observation
         for observation in observations
@@ -106,11 +100,7 @@ def _assert_has_crop_with_context(
         assert all((run_path / path).is_file() for path in observation.crop_paths)
 
 
-def _has_change_type(
-    observations: list[CompactObservation], change_type: str
-) -> bool:
+def _has_change_type(observations: list[CompactObservation], change_type: str) -> bool:
     return any(
-        change.type == change_type
-        for observation in observations
-        for change in observation.changed
+        change.type == change_type for observation in observations for change in observation.changed
     )

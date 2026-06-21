@@ -230,9 +230,7 @@ def test_evaluate_run_resolves_interactive_refs_before_scoring(tmp_path: Path, m
     assert report.steps[0].predicted_next_action.target == "Refresh chart"
 
 
-def test_evaluate_run_resolves_label_to_expected_browsergym_ref(
-    tmp_path: Path, monkeypatch
-):
+def test_evaluate_run_resolves_label_to_expected_browsergym_ref(tmp_path: Path, monkeypatch):
     class FakeLLMReplayAgent:
         name = "llm:fake"
 
