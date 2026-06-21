@@ -107,6 +107,46 @@ def test_observation_to_page_state_from_mock_browsergym_obs():
     assert "ONE" in state.text
 
 
+def test_observation_to_page_state_recovers_superseded_option_contents():
+    obs = {
+        "url": "about:miniwob/list",
+        "goal": "Select Antigua and Barbuda from the scroll list and click Submit.",
+        "open_pages_titles": ("Choose List Task",),
+        "active_page_index": [0],
+        "screenshot": np.zeros((48, 64, 3), dtype=np.uint8),
+        "axtree_object": {
+            "nodes": [
+                {
+                    "nodeId": "1",
+                    "role": {"value": "option"},
+                    "name": {
+                        "value": "",
+                        "sources": [
+                            {
+                                "type": "contents",
+                                "value": {"value": "Antigua and Barbuda"},
+                                "superseded": True,
+                            }
+                        ],
+                    },
+                    "properties": [
+                        {"name": "selected", "value": {"value": False}},
+                    ],
+                    "browsergym_id": "o1",
+                }
+            ]
+        },
+        "extra_element_properties": {
+            "o1": {"bbox": [9, 174, 444, 51], "clickable": False}
+        },
+    }
+
+    state = bg.observation_to_page_state(obs)
+
+    assert state.interactive[0].name == "Antigua and Barbuda"
+    assert state.text == ["Antigua and Barbuda"]
+
+
 def test_parse_browsergym_action_handles_quoted_commas():
     fill = bg.parse_browsergym_action("fill('a2', 'hello, world')")
     assert fill.type == "type"

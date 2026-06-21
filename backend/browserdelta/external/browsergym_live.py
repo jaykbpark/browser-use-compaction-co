@@ -17,6 +17,10 @@ from browserdelta.compaction.metrics import (
     estimate_text_tokens,
     reduction_pct,
 )
+from browserdelta.compaction.renderer import (
+    render_adaptive_state_context,
+    render_interactive_context,
+)
 from browserdelta.eval.llm_agent import _ACTION_SCHEMA, _extract_json_payload, _post_json
 from browserdelta.external.browsergym_adapter import (
     BrowserGymUnavailable,
@@ -68,6 +72,7 @@ class BrowserGymLivePolicy(Protocol):
         previous_action: BrowserAction | None,
         action_history: list[BrowserAction],
         mode: LiveMode,
+        max_steps: int | None = None,
         artifact_root: Path | None = None,
     ) -> BrowserAction:
         ...
@@ -92,9 +97,10 @@ class ScriptedBrowserGymPolicy:
         previous_action: BrowserAction | None,
         action_history: list[BrowserAction],
         mode: LiveMode,
+        max_steps: int | None = None,
         artifact_root: Path | None = None,
     ) -> BrowserAction:
-        del goal, observation, page_state, previous_action, action_history, mode, artifact_root
+        del goal, observation, page_state, previous_action, action_history, mode, max_steps, artifact_root
         if self._index >= len(self._actions):
             return BrowserAction(type="wait")
         action = self._actions[self._index]
@@ -114,9 +120,10 @@ class HeuristicBrowserGymPolicy:
         previous_action: BrowserAction | None,
         action_history: list[BrowserAction],
         mode: LiveMode,
+        max_steps: int | None = None,
         artifact_root: Path | None = None,
     ) -> BrowserAction:
-        del observation, previous_action, action_history, mode, artifact_root
+        del observation, previous_action, action_history, mode, max_steps, artifact_root
         goal_text = _normalize(goal)
         quoted = _quoted_text(goal)
         wants_text_entry = any(word in goal_text for word in ("enter", "type", "write", "fill"))
@@ -170,6 +177,7 @@ class LLMBrowserGymPolicy:
         previous_action: BrowserAction | None,
         action_history: list[BrowserAction],
         mode: LiveMode,
+        max_steps: int | None = None,
         artifact_root: Path | None = None,
     ) -> BrowserAction:
         if not self.api_key:
@@ -178,6 +186,11 @@ class LLMBrowserGymPolicy:
         context = {
             "goal": goal,
             "mode": mode,
+            "step_number": len(action_history) + 1,
+            "max_steps": max_steps,
+            "steps_remaining": max(max_steps - len(action_history), 0)
+            if max_steps is not None
+            else None,
             "previous_action": previous_action.model_dump(mode="json")
             if previous_action
             else None,
@@ -185,8 +198,15 @@ class LLMBrowserGymPolicy:
                 action.model_dump(mode="json") for action in action_history[-8:]
             ],
             "current_observation": _observation_payload(observation),
-            "current_page_state": _page_payload(page_state),
         }
+        if mode == "compact":
+            context["current_page_state"] = None
+            context["state_scope"] = (
+                "compact_observation_only: use refs and hints in current_observation; "
+                "full visible text and full accessibility state are intentionally omitted."
+            )
+        else:
+            context["current_page_state"] = _page_payload(page_state)
         image_url = (
             _image_data_url(observation, artifact_root)
             if mode == "vision_full_state"
@@ -311,6 +331,7 @@ def run_live_episode(
                 previous_action=previous_action,
                 action_history=action_history,
                 mode=mode,
+                max_steps=max_steps,
                 artifact_root=run_path,
             )
             resolved_action = resolve_action_for_page(raw_action, page_state)
@@ -628,10 +649,11 @@ def _render_initial_compact(page_state: PageState) -> str:
         lines.append(f"Title: {page_state.title}")
     if page_state.text:
         lines.append("Visible text: " + "; ".join(page_state.text[:12]))
+    lines.extend(render_adaptive_state_context(page_state))
     if page_state.interactive:
         lines.append(
             "Current interactive elements: "
-            + "; ".join(_render_interactive(item) for item in page_state.interactive[:12])
+            + "; ".join(render_interactive_context(page_state.interactive))
         )
     if page_state.focused_ref:
         lines.append(f"Focused element ref: {page_state.focused_ref}")
@@ -1088,6 +1110,9 @@ Return one JSON browser action for the current browser state.
 
 Rules:
 - Use target refs exactly as shown in interactive_elements whenever possible.
+- In compact mode, trust current_observation.llm_observation. It may include hints like remaining_refs, target_hint, or submit_ready_ref.
+- If submit_ready_ref is present and steps_remaining is 1 or less, click submit_ready_ref.
+- BrowserGym tasks usually have short action budgets. Avoid repeating clicks that caused no state change; if a completion button is ready, click it.
 - Choose one action type: goto, click, type, press, scroll, or wait.
 - For type actions, include the exact text to type.
 - If no useful action is available, return wait.

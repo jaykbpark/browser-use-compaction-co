@@ -121,7 +121,7 @@ def axtree_to_interactive(
             InteractiveElement(
                 ref=ref,
                 role=role or "generic",
-                name=_node_value(node, "name"),
+                name=_node_name(node),
                 value=value or None,
                 disabled=_bool_prop(node, "disabled"),
                 checked=_bool_prop(node, "checked"),
@@ -140,7 +140,7 @@ def axtree_to_text(axtree: dict[str, Any]) -> list[str]:
         role = _node_value(node, "role")
         if role in {"", "generic", "none", "presentation", "InlineTextBox"}:
             continue
-        name = _node_value(node, "name").strip()
+        name = _node_name(node).strip()
         if name:
             lines.append(name)
     return lines
@@ -366,6 +366,25 @@ def _node_value(node: dict[str, Any], key: str) -> str:
     if isinstance(value, dict):
         return str(value.get("value") or "")
     return str(value or "")
+
+
+def _node_name(node: dict[str, Any]) -> str:
+    name = _node_value(node, "name")
+    if name.strip():
+        return name
+
+    raw_name = node.get("name")
+    if not isinstance(raw_name, dict):
+        return name
+    for source in raw_name.get("sources") or []:
+        if not isinstance(source, dict) or source.get("type") != "contents":
+            continue
+        value = source.get("value") or {}
+        if isinstance(value, dict):
+            candidate = str(value.get("value") or "").strip()
+            if candidate:
+                return candidate
+    return name
 
 
 def _property_map(node: dict[str, Any]) -> dict[str, Any]:
