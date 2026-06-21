@@ -189,7 +189,7 @@ function App() {
       const response = await fetch("/api/runs");
       if (!response.ok) throw new Error(`Run index returned ${response.status}`);
       const data = (await response.json()) as RunSummary;
-      const nextRuns = data.runs ?? [];
+      const nextRuns = orderRuns(data.runs ?? []);
       setRuns(nextRuns);
       setSelectedRun((current) => (current && nextRuns.includes(current) ? current : nextRuns[0] ?? ""));
       const loaded = await Promise.all(nextRuns.map((runId) => loadRunQuietly(runId)));
@@ -413,7 +413,7 @@ function App() {
                   savings={stepSavings}
                   step={compactStep}
                 >
-                  <CompactSummary observation={observation} />
+                  <CompactSummary observation={observation} runId={selectedRun} />
                 </PayloadCard>
               </div>
             </div>
@@ -484,6 +484,18 @@ function BrowserFrame({
           <strong>{formatAction(step.action)}</strong>
         </div>
         <img
+          src={runFileUrl(runId, step.after.screenshot)}
+          alt={`Browser after step ${step.step}`}
+        />
+      </div>
+      <div className="screenshot-pair" aria-label="Before and after screenshots">
+        <EvidenceThumb
+          label="Before"
+          src={runFileUrl(runId, step.before.screenshot)}
+          alt={`Browser before step ${step.step}`}
+        />
+        <EvidenceThumb
+          label="After"
           src={runFileUrl(runId, step.after.screenshot)}
           alt={`Browser after step ${step.step}`}
         />
@@ -559,6 +571,20 @@ function FullStateSummary({
   const interactiveCount = state?.interactive?.length ?? 0;
   return (
     <div className="payload-body">
+      {step ? (
+        <div className="evidence-grid two-up">
+          <EvidenceThumb
+            label="Before screenshot"
+            src={runFileUrl(runId, step.before.screenshot)}
+            alt={`Full state before step ${step.step}`}
+          />
+          <EvidenceThumb
+            label="After screenshot"
+            src={runFileUrl(runId, step.after.screenshot)}
+            alt={`Full state after step ${step.step}`}
+          />
+        </div>
+      ) : null}
       <div className="summary-list">
         <SummaryItem icon={<Image />} label="Screenshot" value={step?.after.screenshot ?? "missing"} />
         <SummaryItem icon={<FileJson />} label="Page state" value={step?.after.state ?? "missing"} />
@@ -597,15 +623,34 @@ function FullStateSummary({
   );
 }
 
-function CompactSummary({ observation }: { observation: CompactObservation | null }) {
+function CompactSummary({
+  observation,
+  runId,
+}: {
+  observation: CompactObservation | null;
+  runId: string;
+}) {
   if (!observation) {
     return <p className="muted">Run compaction to create a delta for this step.</p>;
   }
 
   const visibleChanges = observation.changed.slice(0, 4);
+  const evidencePaths = compactEvidencePaths(observation);
   return (
     <div className="payload-body">
       <p className="plain-delta">{observation.summary}</p>
+      {evidencePaths.length ? (
+        <div className="evidence-grid">
+          {evidencePaths.map((path, index) => (
+            <EvidenceThumb
+              key={`${path}-${index}`}
+              label={path === observation.full_screenshot_path ? "Full screenshot" : `Crop ${index + 1}`}
+              src={runFileUrl(runId, path)}
+              alt={`Compact visual evidence ${index + 1}`}
+            />
+          ))}
+        </div>
+      ) : null}
       <div className="summary-list compact-list">
         <SummaryItem label="Route" value={observation.route.replaceAll("_", " ")} />
         <SummaryItem label="Fallback" value={observation.fallback} />
@@ -627,6 +672,23 @@ function CompactSummary({ observation }: { observation: CompactObservation | nul
         <pre>{observation.llm_observation}</pre>
       </details>
     </div>
+  );
+}
+
+function EvidenceThumb({
+  label,
+  src,
+  alt,
+}: {
+  label: string;
+  src: string;
+  alt: string;
+}) {
+  return (
+    <figure className="evidence-thumb">
+      <img src={src} alt={alt} loading="lazy" />
+      <figcaption>{label}</figcaption>
+    </figure>
   );
 }
 
@@ -822,6 +884,21 @@ function formatRunLabel(runId: string) {
       .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
       .join(" ")
   );
+}
+
+function orderRuns(runs: string[]) {
+  return [...runs].sort((a, b) => {
+    const aRank = RUN_LABELS[a] ? 0 : 1;
+    const bRank = RUN_LABELS[b] ? 0 : 1;
+    if (aRank !== bRank) return aRank - bRank;
+    return formatRunLabel(a).localeCompare(formatRunLabel(b));
+  });
+}
+
+function compactEvidencePaths(observation: CompactObservation) {
+  const paths = [...observation.crop_paths];
+  if (observation.full_screenshot_path) paths.push(observation.full_screenshot_path);
+  return paths;
 }
 
 function errorMessage(err: unknown) {
