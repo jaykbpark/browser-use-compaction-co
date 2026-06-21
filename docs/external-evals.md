@@ -117,3 +117,31 @@ script returns a clean availability report instead of breaking normal CI:
 PYTHONPATH=$PWD/backend .venv-browsergym/bin/python scripts/run_browsergym_live.py \
   --probe-workarena
 ```
+
+## Failure Loop
+
+After a scaled run, turn the report's failure table into a focused rerun suite.
+This is the fastest way to show whether a compaction improvement fixed the hard
+cases without paying to rerun the whole benchmark.
+
+Default hard-case loop: compact regressions plus tasks where both modes failed.
+
+```bash
+python3 scripts/build_failure_suite.py \
+  reports/external/browsergym-live-miniwob_llm_combined50_20260621T054656Z.json \
+  --out artifacts/failure-loop/combined50-hard-cases.json
+```
+
+Then rerun only those cases:
+
+```bash
+PYTHONPATH=$PWD/backend .venv-browsergym/bin/python scripts/run_browsergym_live.py \
+  artifacts/failure-loop/combined50-hard-cases.json \
+  --modes compact,full_state \
+  --policy llm \
+  --headless \
+  --retries 1
+```
+
+For a demo-positive loop that also includes cases where compact beat the
+baseline, add `--all-non-success` when building the suite.

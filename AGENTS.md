@@ -158,6 +158,10 @@ run folder. Resolve them as `runs/<run_id>/<path>` when reading files.
   agent acts from BrowserDelta compact observations versus full-state
   observations on the same BrowserGym tasks. Keep MiniWoB/WorkArena live evals
   in the isolated BrowserGym environment and keep WorkArena optional.
+- Use `scripts/build_failure_suite.py` after a scaled live BrowserGym report to
+  turn compact regressions and both-failed tasks into a focused rerunnable
+  suite. This is the preferred failure loop for checking whether compaction
+  changes fixed hard MiniWoB cases without rerunning the full benchmark.
 - The login and modal fixtures should produce `route=text_only`,
   `fallback=none`, and a positive `reduction_pct`.
 - The visual-only fixture should produce `route=crop_with_context`,
@@ -211,6 +215,8 @@ python scripts/eval_run.py runs/local_checkout --predictor llm --context-mode vi
 python scripts/eval_suite.py --predictor llm --compare runs/local_checkout runs/browserbase_checkout runs/visual_canvas_chart runs/visual_progress_toast runs/visual_swatch_picker
 PYTHONPATH=$PWD/backend .venv-browsergym/bin/python scripts/run_browsergym_live.py --env browsergym/miniwob.click-button --modes compact,full_state --policy llm --headless --max-steps 10
 PYTHONPATH=$PWD/backend .venv-browsergym/bin/python scripts/run_browsergym_live.py docs/browsergym-live-suite.example.json --modes compact,full_state --policy llm --headless --limit 50 --retries 1
+python3 scripts/build_failure_suite.py reports/external/browsergym-live-miniwob_llm_combined50_20260621T054656Z.json --out artifacts/failure-loop/combined50-hard-cases.json
+PYTHONPATH=$PWD/backend .venv-browsergym/bin/python scripts/run_browsergym_live.py artifacts/failure-loop/combined50-hard-cases.json --modes compact,full_state --policy llm --headless --retries 1
 PYTHONPATH=$PWD/backend .venv-browsergym/bin/python scripts/run_browsergym_live.py --probe-workarena
 python scripts/compact_run.py runs/smoke
 python scripts/compact_run.py examples/runs/login_error
