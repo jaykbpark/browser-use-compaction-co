@@ -435,52 +435,93 @@ const ProblemScene = () => {
     <Base activeIndex={1}>
       <div style={{opacity, height: "100%"}}>
         <Kicker>the problem</Kicker>
-        <Title size={86} maxWidth={1320}>
+        <Title size={74} maxWidth={1260}>
           Browser agents keep paying to reread the whole page.
         </Title>
         <div
           style={{
-            marginTop: 62,
+            marginTop: 50,
             display: "grid",
-            gridTemplateColumns: "1.05fr 0.95fr",
+            gridTemplateColumns: "1.02fr 0.98fr",
             gap: 48,
-            height: 610,
+            height: 632,
           }}
         >
-          <Panel style={{padding: 36, position: "relative"}}>
-            <LoopNode label="browser" x={70} y={150} tone={palette.green} />
-            <LoopNode label="screenshot" x={358} y={150} tone={palette.red} active />
-            <LoopNode label="LLM" x={646} y={150} tone={palette.blue} />
-            <LoopNode label="action" x={358} y={382} tone={palette.ink} />
-            <Arrow x={263} y={192} w={86} />
-            <Arrow x={551} y={192} w={86} />
-            <Arrow x={686} y={304} w={90} rotate={90} />
-            <Arrow x={265} y={424} w={112} rotate={180} />
-            {Array.from({length: cycles}).map((_, index) => (
-              <div
-                key={index}
-                style={{
-                  position: "absolute",
-                  left: 114 + index * 28,
-                  bottom: 76 + index * 14,
-                  width: 232,
-                  height: 136,
-                  borderRadius: 12,
-                  border: `1px solid ${palette.red}`,
-                  background: "rgba(180,58,49,0.07)",
-                  transform: `rotate(${-4 + index * 1.2}deg)`,
-                  opacity: 0.28 + index * 0.08,
-                }}
-              />
-            ))}
+          <Panel style={{padding: 42, position: "relative"}}>
             <div
               style={{
                 position: "absolute",
-                left: 92,
+                left: 42,
+                right: 42,
+                top: 56,
+                display: "grid",
+                gridTemplateColumns: "170px 72px 206px 72px 170px",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <LoopNode label="browser" tone={palette.green} />
+              <InlineArrow />
+              <LoopNode label="screenshot" tone={palette.red} active />
+              <InlineArrow />
+              <LoopNode label="LLM" tone={palette.blue} />
+            </div>
+            <div
+              style={{
+                position: "absolute",
+                left: 0,
+                right: 0,
+                top: 206,
+                display: "flex",
+                justifyContent: "center",
+                color: palette.lineDark,
+                fontSize: 50,
+                fontFamily: font.mono,
+              }}
+            >
+              |
+            </div>
+            <div
+              style={{
+                position: "absolute",
+                left: 0,
+                right: 0,
+                bottom: 116,
+                height: 252,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              {Array.from({length: cycles}).map((_, index) => (
+                <div
+                  key={index}
+                  style={{
+                    position: "absolute",
+                    left: `calc(50% - ${168 - index * 18}px)`,
+                    top: 22 + index * 13,
+                    width: 258,
+                    height: 142,
+                    borderRadius: 12,
+                    border: `1px solid ${palette.red}`,
+                    background: "rgba(180,58,49,0.07)",
+                    transform: `rotate(${-4 + index * 1.2}deg)`,
+                    opacity: 0.28 + index * 0.08,
+                  }}
+                />
+              ))}
+              <LoopNode label="action" tone={palette.ink} style={{zIndex: 2}} />
+            </div>
+            <div
+              style={{
+                position: "absolute",
+                left: 42,
+                right: 42,
                 bottom: 42,
                 fontFamily: font.mono,
-                fontSize: 22,
+                fontSize: 21,
                 color: palette.red,
+                textAlign: "center",
               }}
             >
               duplicate screenshots stack up
@@ -746,46 +787,76 @@ const RouterScene = () => {
     <Base activeIndex={5}>
       <div style={{opacity, height: "100%"}}>
         <Kicker>router</Kicker>
-        <Title size={78} maxWidth={1320}>
+        <Title size={66} maxWidth={1220}>
           Pick the smallest observation that preserves the next action.
         </Title>
-        <div style={{position: "relative", height: 680, marginTop: 42}}>
-          <Panel
+        <Panel
+          style={{
+            position: "relative",
+            height: 648,
+            marginTop: 42,
+            padding: 44,
+            background: "rgba(255,255,255,0.66)",
+          }}
+        >
+          <div
             style={{
               position: "absolute",
-              left: 575,
-              top: 172,
-              width: 360,
-              height: 220,
+              left: "50%",
+              top: 62,
+              width: 510,
+              height: 156,
+              marginLeft: -255,
+              borderRadius: 26,
+              border: `2px solid ${palette.green}`,
+              background: "rgba(255,255,255,0.96)",
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
               justifyContent: "center",
-              borderColor: palette.green,
-              background: "rgba(255,255,255,0.94)",
+              boxShadow: "0 18px 48px rgba(30,42,30,0.08)",
             }}
           >
-            <div style={{fontFamily: font.mono, fontSize: 24, color: palette.green}}>
+            <div style={{fontFamily: font.mono, fontSize: 25, color: palette.green}}>
               BrowserDelta router
             </div>
-            <div style={{marginTop: 16, fontSize: 42, fontWeight: 650}}>
+            <div
+              style={{
+                marginTop: 14,
+                width: "100%",
+                textAlign: "center",
+                fontSize: 40,
+                lineHeight: 1.08,
+                fontWeight: 650,
+              }}
+            >
               how much context?
             </div>
-          </Panel>
-          {routes.map((route, index) => (
-            <RouteCard
-              key={route.name}
-              route={route}
-              index={index}
-              active={active === index}
-              x={[40, 1040, 1040][index]}
-              y={[118, 54, 388][index]}
-            />
-          ))}
-          <RouterLine x1={400} y1={230} x2={575} y2={280} active={active === 0} />
-          <RouterLine x1={935} y1={235} x2={1040} y2={166} active={active === 1} />
-          <RouterLine x1={935} y1={332} x2={1040} y2={500} active={active === 2} />
-        </div>
+          </div>
+          <RouterLine x1={840} y1={218} x2={260} y2={352} active={active === 0} />
+          <RouterLine x1={840} y1={218} x2={840} y2={352} active={active === 1} />
+          <RouterLine x1={840} y1={218} x2={1420} y2={352} active={active === 2} />
+          <div
+            style={{
+              position: "absolute",
+              left: 44,
+              right: 44,
+              bottom: 44,
+              display: "grid",
+              gridTemplateColumns: "repeat(3, 1fr)",
+              gap: 28,
+            }}
+          >
+            {routes.map((route, index) => (
+              <RouteCard
+                key={route.name}
+                route={route}
+                index={index}
+                active={active === index}
+              />
+            ))}
+          </div>
+        </Panel>
       </div>
     </Base>
   );
@@ -1019,19 +1090,22 @@ const LoopNode = ({
   y,
   tone,
   active = false,
+  style,
 }: {
   label: string;
-  x: number;
-  y: number;
+  x?: number;
+  y?: number;
   tone: string;
   active?: boolean;
+  style?: React.CSSProperties;
 }) => (
   <div
     style={{
-      position: "absolute",
+      position: x === undefined || y === undefined ? "relative" : "absolute",
       left: x,
       top: y,
-      width: 188,
+      width: "100%",
+      maxWidth: 206,
       height: 92,
       borderRadius: 22,
       border: `2px solid ${tone}`,
@@ -1043,9 +1117,34 @@ const LoopNode = ({
       fontSize: 23,
       color: tone,
       fontWeight: 700,
+      ...style,
     }}
   >
     {label}
+  </div>
+);
+
+const InlineArrow = () => (
+  <div
+    style={{
+      width: "100%",
+      height: 2,
+      background: palette.lineDark,
+      position: "relative",
+    }}
+  >
+    <div
+      style={{
+        position: "absolute",
+        right: -4,
+        top: -5,
+        width: 12,
+        height: 12,
+        borderRight: `2px solid ${palette.lineDark}`,
+        borderTop: `2px solid ${palette.lineDark}`,
+        transform: "rotate(45deg)",
+      }}
+    />
   </div>
 );
 
@@ -1316,36 +1415,39 @@ const RouteCard = ({
   route: {name: string; tone: string; title: string; payload: string};
   index: number;
   active: boolean;
-  x: number;
-  y: number;
+  x?: number;
+  y?: number;
 }) => {
   const f = useCurrentFrame();
   const appear = progress(f, frame(2.5 + index * 1.0), frame(0.8));
   return (
     <Panel
       style={{
-        position: "absolute",
+        position: x === undefined || y === undefined ? "relative" : "absolute",
         left: x,
         top: y,
-        width: 438,
-        height: 196,
+        width: x === undefined || y === undefined ? "auto" : 438,
+        height: 214,
         padding: 28,
         borderColor: active ? route.tone : palette.line,
         background: active ? "rgba(255,255,255,0.98)" : "rgba(255,255,255,0.70)",
         opacity: appear,
         transform: `translateY(${(1 - appear) * 24}px) scale(${active ? 1.035 : 1})`,
+        transformOrigin: "center",
       }}
     >
-      <div style={{fontFamily: font.mono, fontSize: 27, color: route.tone, fontWeight: 800}}>
+      <div style={{fontFamily: font.mono, fontSize: 26, color: route.tone, fontWeight: 800}}>
         {route.name}
       </div>
-      <div style={{marginTop: 12, fontSize: 28, fontWeight: 640}}>{route.title}</div>
+      <div style={{marginTop: 13, fontSize: 28, lineHeight: 1.08, fontWeight: 640}}>
+        {route.title}
+      </div>
       <div
         style={{
-          marginTop: 12,
+          marginTop: 14,
           fontFamily: font.mono,
           color: palette.muted,
-          fontSize: 18,
+          fontSize: 17,
           lineHeight: 1.35,
         }}
       >
