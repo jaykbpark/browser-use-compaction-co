@@ -302,16 +302,6 @@ function App() {
           <p className="eyebrow">Replay evaluator</p>
           <h1>BrowserDelta replay</h1>
         </div>
-        <div className="hero-stats" aria-label="Demo result">
-          <span>
-            <strong>{summary.compactPassed}/{summary.evaluated}</strong>
-            compact
-          </span>
-          <span>
-            <strong>{formatPct(summary.tokenReductionPct)}</strong>
-            saved
-          </span>
-        </div>
       </header>
 
       <section className="controls" aria-label="Run controls">
@@ -719,20 +709,21 @@ function BenchmarkSummary({ runs }: { runs: RunDetail[] }) {
 
   return (
     <section className="mini-panel">
-      <p className="eyebrow">Loaded benchmark rows</p>
+      <p className="eyebrow">Saved eval output</p>
       <h2>
-        {totals.compact}/{totals.evaluated} compact · {totals.baseline}/{totals.evaluated} full
+        {totals.evaluated} recorded steps compared
       </h2>
       <p className="muted">
-        Across {rows.length} run{rows.length === 1 ? "" : "s"}, compact context currently saves{" "}
-        {formatPct(reduction)} of the non-compact payload.
+        Compact passed {totals.compact}/{totals.evaluated}; full-state passed {totals.baseline}/
+        {totals.evaluated}; compact payload saved {formatPct(reduction)}.
       </p>
       <div className="run-table">
         {rows.slice(0, 4).map((report) => (
           <div key={report.run_id}>
             <strong>{report.run_id}</strong>
             <span>
-              {report.summary.compact_passed_steps}/{report.summary.evaluated_steps} ·{" "}
+              compact {report.summary.compact_passed_steps}/{report.summary.evaluated_steps} · full{" "}
+              {report.summary.baseline_passed_steps}/{report.summary.evaluated_steps} ·{" "}
               {formatPct(report.summary.token_reduction_pct)} saved
             </span>
           </div>
