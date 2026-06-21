@@ -1,0 +1,221 @@
+{
+  "benchmark": "miniwob-5seed",
+  "policy": "llm",
+  "modes": [
+    "compact",
+    "full_state"
+  ],
+  "max_steps": 8,
+  "subset_rule": "Full MiniWoB suite: all 125 registered browsergym/miniwob.* tasks per seed.",
+  "aggregate": {
+    "seeds": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5"
+    ],
+    "num_seeds": 5,
+    "tasks_per_seed": 125,
+    "consistent_task_count": true,
+    "compact_success_rate": {
+      "mean": 0.4096,
+      "std": 0.0155,
+      "n": 5
+    },
+    "full_state_success_rate": {
+      "mean": 0.4352,
+      "std": 0.0193,
+      "n": 5
+    },
+    "compact_avg_tokens": {
+      "mean": 469.88,
+      "std": 28.2955,
+      "n": 5
+    },
+    "full_state_avg_tokens": {
+      "mean": 2978.32,
+      "std": 212.0384,
+      "n": 5
+    },
+    "token_reduction_pct": {
+      "mean": 84.17,
+      "std": 1.1641,
+      "n": 5
+    },
+    "failure_class_totals": {
+      "both_success": 238,
+      "compact_only_success": 18,
+      "compact_regression": 34,
+      "both_failed": 335,
+      "runner_error": 0,
+      "missing_mode": 0
+    },
+    "top_compact_regressions": [
+      {
+        "env_id": "browsergym/miniwob.email-inbox-reply",
+        "seeds": 4
+      },
+      {
+        "env_id": "browsergym/miniwob.identify-shape",
+        "seeds": 4
+      },
+      {
+        "env_id": "browsergym/miniwob.email-inbox-star-reply",
+        "seeds": 4
+      },
+      {
+        "env_id": "browsergym/miniwob.email-inbox",
+        "seeds": 2
+      },
+      {
+        "env_id": "browsergym/miniwob.email-inbox-delete",
+        "seeds": 2
+      },
+      {
+        "env_id": "browsergym/miniwob.guess-number",
+        "seeds": 2
+      },
+      {
+        "env_id": "browsergym/miniwob.find-word",
+        "seeds": 2
+      },
+      {
+        "env_id": "browsergym/miniwob.multi-orderings",
+        "seeds": 2
+      },
+      {
+        "env_id": "browsergym/miniwob.simple-arithmetic",
+        "seeds": 1
+      },
+      {
+        "env_id": "browsergym/miniwob.copy-paste-2",
+        "seeds": 1
+      }
+    ],
+    "top_compact_only_wins": [
+      {
+        "env_id": "browsergym/miniwob.click-tab-2",
+        "seeds": 2
+      },
+      {
+        "env_id": "browsergym/miniwob.click-tab-2-hard",
+        "seeds": 2
+      },
+      {
+        "env_id": "browsergym/miniwob.count-sides",
+        "seeds": 2
+      },
+      {
+        "env_id": "browsergym/miniwob.email-inbox-important",
+        "seeds": 2
+      },
+      {
+        "env_id": "browsergym/miniwob.odd-or-even",
+        "seeds": 2
+      },
+      {
+        "env_id": "browsergym/miniwob.click-collapsible-2",
+        "seeds": 1
+      },
+      {
+        "env_id": "browsergym/miniwob.click-collapsible-2-nodelay",
+        "seeds": 1
+      },
+      {
+        "env_id": "browsergym/miniwob.click-tab-2-easy",
+        "seeds": 1
+      },
+      {
+        "env_id": "browsergym/miniwob.click-tab-2-medium",
+        "seeds": 1
+      },
+      {
+        "env_id": "browsergym/miniwob.email-inbox-delete",
+        "seeds": 1
+      }
+    ]
+  },
+  "per_seed": [
+    {
+      "seed": "1",
+      "report_path": "/home/ubuntu/repos/browser-use-compaction-co/reports/external/miniwob-5seed/seed-1/browsergym-live-miniwob_llm_20260621T093712Z.json",
+      "episodes": 125,
+      "compact_success_rate": 0.432,
+      "full_state_success_rate": 0.432,
+      "compact_avg_tokens": 482.3,
+      "full_state_avg_tokens": 3227.3,
+      "token_reduction_pct": 85.06,
+      "failure_classes": {
+        "both_failed": 65,
+        "both_success": 48,
+        "compact_only_success": 6,
+        "compact_regression": 6
+      }
+    },
+    {
+      "seed": "2",
+      "report_path": "/home/ubuntu/repos/browser-use-compaction-co/reports/external/miniwob-5seed/seed-2/browsergym-live-miniwob_llm_20260621T093758Z.json",
+      "episodes": 125,
+      "compact_success_rate": 0.408,
+      "full_state_success_rate": 0.424,
+      "compact_avg_tokens": 497.6,
+      "full_state_avg_tokens": 3000.2,
+      "token_reduction_pct": 83.41,
+      "failure_classes": {
+        "both_failed": 67,
+        "both_success": 46,
+        "compact_only_success": 5,
+        "compact_regression": 7
+      }
+    },
+    {
+      "seed": "3",
+      "report_path": "/home/ubuntu/repos/browser-use-compaction-co/reports/external/miniwob-5seed/seed-3/browsergym-live-miniwob_llm_20260621T093455Z.json",
+      "episodes": 125,
+      "compact_success_rate": 0.408,
+      "full_state_success_rate": 0.448,
+      "compact_avg_tokens": 429.4,
+      "full_state_avg_tokens": 2628.8,
+      "token_reduction_pct": 83.67,
+      "failure_classes": {
+        "both_failed": 65,
+        "both_success": 47,
+        "compact_only_success": 4,
+        "compact_regression": 9
+      }
+    },
+    {
+      "seed": "4",
+      "report_path": "/home/ubuntu/repos/browser-use-compaction-co/reports/external/miniwob-5seed/seed-4/browsergym-live-miniwob_llm_20260621T093708Z.json",
+      "episodes": 125,
+      "compact_success_rate": 0.416,
+      "full_state_success_rate": 0.464,
+      "compact_avg_tokens": 496.9,
+      "full_state_avg_tokens": 2881.5,
+      "token_reduction_pct": 82.76,
+      "failure_classes": {
+        "both_failed": 65,
+        "both_success": 50,
+        "compact_only_success": 2,
+        "compact_regression": 8
+      }
+    },
+    {
+      "seed": "5",
+      "report_path": "/home/ubuntu/repos/browser-use-compaction-co/reports/external/miniwob-5seed/seed-5/browsergym-live-miniwob_llm_20260621T093647Z.json",
+      "episodes": 125,
+      "compact_success_rate": 0.384,
+      "full_state_success_rate": 0.408,
+      "compact_avg_tokens": 443.2,
+      "full_state_avg_tokens": 3153.8,
+      "token_reduction_pct": 85.95,
+      "failure_classes": {
+        "both_failed": 73,
+        "both_success": 47,
+        "compact_only_success": 1,
+        "compact_regression": 4
+      }
+    }
+  ]
+}

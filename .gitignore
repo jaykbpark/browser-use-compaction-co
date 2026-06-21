@@ -4,6 +4,7 @@
 !.env.example
 
 .venv/
+.venv-browsergym/
 __pycache__/
 *.py[cod]
 .pytest_cache/
@@ -19,6 +20,9 @@ runs/*
 !runs/.gitkeep
 **/compact_observations.jsonl
 **/crops/
-reports/
+reports/*
+!reports/demo/
+reports/demo/*
+!reports/demo/miniwob-5seed-summary/
 
 *.log
