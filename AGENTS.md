@@ -128,6 +128,9 @@ run folder. Resolve them as `runs/<run_id>/<path>` when reading files.
 - Use `tasks/local_checkout.json` plus `demo_pages/local_checkout.html` as the
   live local browser proof. It records validation, input value, visual-only crop
   fallback, and modal-open transitions without external credentials.
+- Use `tasks/search_filter.json` plus `demo_pages/search_filter.html` as a
+  deterministic viewer/demo benchmark. It records table filtering, add-to-cart
+  state, reset, and a second filter across multiple screenshot-rich steps.
 - Use `tasks/visual_canvas_chart.json`, `tasks/visual_progress_toast.json`, and
   `tasks/visual_swatch_picker.json` as visual benchmark tasks for canvas redraws,
   progress/toast changes, and style/state changes.
@@ -152,6 +155,8 @@ run folder. Resolve them as `runs/<run_id>/<path>` when reading files.
   `fallback=crop`, and at least one generated crop path.
 - Visual benchmark tasks should continue to record and compact locally through
   `tests/test_visual_benchmark_tasks.py`; do not require OpenAI calls there.
+- The search-filter benchmark should continue to record, compact, and heuristic
+  evaluate locally through `tests/test_search_filter_task.py`.
 - Keep fixture raw inputs stable unless the shared schema changes. If the schema
   changes, update the fixture, `docs/schemas.md`, and tests in the same change.
 - Do not commit generated `compact_observations.jsonl` from local smoke runs

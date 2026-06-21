@@ -415,9 +415,11 @@ button.ghost:hover:not(:disabled) {
 }
 
 .crop-row img {
-  height: 56px;
+  height: 76px;
+  max-width: 180px;
   border: 1px solid var(--line);
   border-radius: 6px;
+  object-fit: contain;
 }
 
 /* ---- outcome ---- */
@@ -483,6 +485,15 @@ button.ghost:hover:not(:disabled) {
   }
 
   .pane-body {
-    max-height: 360px;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .pane-body.shot {
+    min-height: 260px;
+  }
+
+  .crop-row img {
+    height: 88px;
   }
 }

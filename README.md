@@ -87,6 +87,15 @@ and immediately compacts the run. Expected behavior:
 - step 3: canvas-only chart update -> `crop_with_context`
 - step 4: checkout modal opens -> `text_only`
 
+Record the deterministic table/filter viewer demo:
+
+```bash
+python scripts/record_demo.py --task tasks/search_filter.json --run-id search_filter --headless --compact --runtime local
+```
+
+This produces four screenshot-rich steps for the viewer: filter the fruit table,
+add Strawberry to the cart, reset the table, and filter for Cherry.
+
 Compact a run:
 
 ```bash
@@ -148,6 +157,19 @@ python scripts/eval_suite.py --predictor llm --compare --baseline-context full_s
 
 Task JSON resolves its `id` to `runs/<id>`; suite JSON can also pass a `runs`
 list of run folders.
+
+Prepare the screenshot-heavy local viewer data without external credentials:
+
+```bash
+for task in local_checkout search_filter visual_canvas_chart visual_progress_toast visual_swatch_picker; do
+  python scripts/record_demo.py --task "tasks/${task}.json" --run-id "$task" --headless --compact --runtime local
+done
+python scripts/eval_suite.py --predictor heuristic --compare --baseline-context vision_full_state runs/local_checkout runs/search_filter runs/visual_canvas_chart runs/visual_progress_toast runs/visual_swatch_picker
+```
+
+The generated `runs/` folders are intentionally ignored by git, but the viewer
+will read them through the API and show full screenshots, compact text, and crop
+thumbnails for visual-change steps.
 
 ### Arize AX Tracing
 
@@ -225,6 +247,8 @@ python scripts/record_demo.py --task tasks/visual_swatch_picker.json --run-id vi
 - `visual_canvas_chart`: repeated canvas redraws with no useful DOM text delta.
 - `visual_progress_toast`: progress bar visual movement plus a completion toast.
 - `visual_swatch_picker`: radio state plus selected swatch styling.
+- `search_filter`: table filtering and cart state transitions for the demo
+  viewer's screenshot-vs-compact-text comparison.
 
 Run tests:
 
@@ -295,10 +319,12 @@ scripts/
 
 tasks/
   local_checkout.json deterministic local proof task
+  search_filter.json deterministic table/filter viewer demo
   visual_*.json visual benchmark tasks for CV-heavy state changes
 
 demo_pages/
   local_checkout.html deterministic browser page for recorder/codec proof
+  search_filter.html deterministic table/filter viewer page
   visual_*.html self-contained visual benchmark pages
 
 viewer/
