@@ -128,6 +128,9 @@ run folder. Resolve them as `runs/<run_id>/<path>` when reading files.
 - Use `tasks/local_checkout.json` plus `demo_pages/local_checkout.html` as the
   live local browser proof. It records validation, input value, visual-only crop
   fallback, and modal-open transitions without external credentials.
+- Use `tasks/search_filter.json` plus `demo_pages/search_filter.html` as a
+  deterministic table/filter benchmark. It records search filtering, a changed
+  result table, an add-to-cart state update, reset, and a second filter.
 - Use `tasks/visual_canvas_chart.json`, `tasks/visual_progress_toast.json`, and
   `tasks/visual_swatch_picker.json` as visual benchmark tasks for canvas redraws,
   progress/toast changes, and style/state changes.
@@ -146,12 +149,19 @@ run folder. Resolve them as `runs/<run_id>/<path>` when reading files.
   `python scripts/eval_run.py runs/local_checkout --predictor llm --compare --baseline-context full_state`.
 - Batch that comparison over the local, Browserbase, and visual benchmark runs
   with `python scripts/eval_suite.py --predictor llm --compare runs/local_checkout runs/browserbase_checkout runs/visual_canvas_chart runs/visual_progress_toast runs/visual_swatch_picker`.
+- BrowserGym/MiniWoB support is an optional adapter, not a core dependency.
+  Current BrowserGym packages pin an older Playwright, so use an isolated
+  BrowserGym environment for `scripts/record_browsergym.py`. Do not add
+  BrowserGym to the default project dependencies unless the Playwright conflict
+  is resolved.
 - The login and modal fixtures should produce `route=text_only`,
   `fallback=none`, and a positive `reduction_pct`.
 - The visual-only fixture should produce `route=crop_with_context`,
   `fallback=crop`, and at least one generated crop path.
 - Visual benchmark tasks should continue to record and compact locally through
   `tests/test_visual_benchmark_tasks.py`; do not require OpenAI calls there.
+- External benchmark tests should mock BrowserGym and must not require a live
+  MiniWoB server in normal CI.
 - Keep fixture raw inputs stable unless the shared schema changes. If the schema
   changes, update the fixture, `docs/schemas.md`, and tests in the same change.
 - Do not commit generated `compact_observations.jsonl` from local smoke runs

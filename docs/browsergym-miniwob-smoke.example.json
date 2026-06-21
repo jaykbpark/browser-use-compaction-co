@@ -1,0 +1,13 @@
+{
+  "suite": "browsergym-miniwob-smoke",
+  "episodes": [
+    {
+      "env_id": "browsergym/miniwob.click-button",
+      "run_id": "bg_click_button",
+      "goal": "Click the requested button.",
+      "actions": [
+        "click('a12')"
+      ]
+    }
+  ]
+}

@@ -184,11 +184,42 @@ Visual benchmark tasks stress CV-heavy browser changes:
 python scripts/record_demo.py --task tasks/visual_canvas_chart.json --run-id visual_canvas_chart --headless --compact --runtime local
 python scripts/record_demo.py --task tasks/visual_progress_toast.json --run-id visual_progress_toast --headless --compact --runtime local
 python scripts/record_demo.py --task tasks/visual_swatch_picker.json --run-id visual_swatch_picker --headless --compact --runtime local
+python scripts/record_demo.py --task tasks/search_filter.json --run-id search_filter --headless --compact --runtime local
 ```
 
 - `visual_canvas_chart`: repeated canvas redraws with no useful DOM text delta.
 - `visual_progress_toast`: progress bar visual movement plus a completion toast.
 - `visual_swatch_picker`: radio state plus selected swatch styling.
+- `search_filter`: table filtering plus add-to-cart and reset state changes.
+
+## External Evals
+
+BrowserDelta can import BrowserGym/MiniWoB episodes into the same run-folder
+contract, then score them with the existing replay evaluator:
+
+```bash
+PYTHONPATH=$PWD/backend python scripts/record_browsergym.py \
+  --env browsergym/miniwob.click-button \
+  --run-id bg_click_button \
+  --action "click('a12')" \
+  --headless \
+  --compact
+
+python scripts/eval_run.py runs/bg_click_button --compare --baseline-context vision_full_state
+```
+
+Important: BrowserGym is intentionally not a default dependency because current
+`browsergym-core` pins an older Playwright than the main recorder uses. Install
+and run it in an isolated Python environment, then point `PYTHONPATH` at this
+repo's `backend/` package. Also set `MINIWOB_URL` as required by MiniWoB++.
+
+For multi-episode scripted suites, use:
+
+```bash
+python scripts/eval_external_suite.py docs/browsergym-miniwob-smoke.example.json --compare
+```
+
+See `docs/external-evals.md` for the benchmark strategy and caveats.
 
 Run tests:
 

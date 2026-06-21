@@ -19,5 +19,6 @@ runs/*
 !runs/.gitkeep
 **/compact_observations.jsonl
 **/crops/
+reports/
 
 *.log

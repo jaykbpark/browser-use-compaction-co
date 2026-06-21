@@ -42,6 +42,14 @@ class HeuristicReplayAgent:
                     confidence=0.82,
                 )
 
+        search_filter_prediction = _predict_search_filter_next(
+            goal,
+            observation,
+            previous_action=previous_action,
+        )
+        if search_filter_prediction:
+            return search_filter_prediction
+
         if "value changed" in text and "refresh chart" in text:
             return ReplayPrediction(
                 action=BrowserAction(type="click", target="Refresh chart"),
@@ -169,6 +177,68 @@ def _find_interactive(
     return None
 
 
+def _find_enabled_by_name(
+    observation: CompactObservation,
+    role: str,
+    name_part: str,
+) -> InteractiveElement | None:
+    expected_role = _normalize(role)
+    expected_name = _normalize(name_part)
+    for item in observation.interactive:
+        if _normalize(item.role) != expected_role or item.disabled:
+            continue
+        if expected_name in _normalize(_target_label(item)):
+            return item
+    return None
+
+
+def _predict_search_filter_next(
+    goal: str,
+    observation: CompactObservation,
+    previous_action: BrowserAction | None,
+) -> ReplayPrediction | None:
+    text = _normalized_context(goal, observation)
+    if "search fruits" not in text or "fruit" not in text:
+        return None
+
+    if previous_action and previous_action.type == "type":
+        typed = _normalize(previous_action.text)
+        if "berry" in typed:
+            add_strawberry = _find_enabled_by_name(observation, "button", "Add Strawberry")
+            if add_strawberry:
+                return ReplayPrediction(
+                    action=BrowserAction(type="click", target=_target_label(add_strawberry)),
+                    rationale="The berry filter is applied; add the matching strawberry row.",
+                    confidence=0.78,
+                )
+
+    if previous_action and previous_action.type == "click":
+        target = _normalize(previous_action.target)
+        if "add strawberry" in target:
+            reset = _find_enabled_by_name(observation, "button", "Reset")
+            if reset:
+                return ReplayPrediction(
+                    action=BrowserAction(type="click", target=_target_label(reset)),
+                    rationale="The fruit was added; reset before the second filter.",
+                    confidence=0.76,
+                )
+        if "reset" in target:
+            textbox = _find_enabled_by_name(observation, "textbox", "Search fruits")
+            query = _search_query_from_goal(goal) or "cherry"
+            if textbox:
+                return ReplayPrediction(
+                    action=BrowserAction(
+                        type="type",
+                        target=_target_label(textbox),
+                        text=query,
+                    ),
+                    rationale="The filter was reset; enter the requested second search.",
+                    confidence=0.72,
+                )
+
+    return None
+
+
 def _target_label(item: InteractiveElement) -> str:
     attrs = item.attributes or {}
     return (
@@ -193,6 +263,11 @@ def _target_matches(predicted: str | None, expected: str | None) -> bool:
 def _email_from_goal(goal: str) -> str | None:
     match = re.search(r"[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}", goal)
     return match.group(0) if match else None
+
+
+def _search_query_from_goal(goal: str) -> str | None:
+    match = re.search(r"search for ([A-Za-z][\w-]*)", goal, flags=re.IGNORECASE)
+    return match.group(1) if match else None
 
 
 def _normalize(value: str | None) -> str:
