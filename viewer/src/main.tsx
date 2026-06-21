@@ -46,7 +46,6 @@ type ReplayStepResult = {
 };
 
 type ReplayReport = {
-  context_mode: "compact" | "full_state" | "vision_full_state";
   predictor: string;
   evaluated_steps: number;
   passed_steps: number;
@@ -54,7 +53,6 @@ type ReplayReport = {
 };
 
 type EvalComparisonReport = {
-  predictor: string;
   summary: {
     evaluated_steps: number;
     compact_passed_steps: number;
@@ -67,7 +65,6 @@ type EvalComparisonReport = {
 
 type RunDetail = {
   run_id: string;
-  manifest: { start_url?: string; mode?: string } | null;
   steps: StepRecord[];
   compact_observations: CompactObservation[];
   eval_report?: ReplayReport | null;
@@ -82,6 +79,7 @@ function App() {
   const [predictor, setPredictor] = React.useState<"heuristic" | "llm">("heuristic");
   const [status, setStatus] = React.useState<"loading" | "ready" | "offline">("loading");
   const [busy, setBusy] = React.useState<string | null>(null);
+  const [toolsOpen, setToolsOpen] = React.useState(false);
 
   React.useEffect(() => {
     fetch("/api/runs")
@@ -129,46 +127,92 @@ function App() {
   const current = observations.find((o) => o.step === selectedStep) ?? observations[0] ?? null;
   const currentRaw = detail?.steps.find((s) => s.step === current?.step) ?? null;
   const currentReplay = detail?.eval_report?.steps.find((s) => s.step === current?.step) ?? null;
+  const hasEval = totals.matched !== null && totals.total !== null;
 
   return (
     <main className="page">
       <header className="bar">
         <div className="wordmark">
-          <strong>BrowserDelta</strong>
-          <span>Less context per step. Same decisions.</span>
+          BrowserDelta <span>· less context per step, same decisions</span>
         </div>
-        <div className="controls">
-          <select value={selectedRun} onChange={(e) => setSelectedRun(e.target.value)}>
-            {runs.length === 0 ? <option>no runs</option> : null}
-            {runs.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
-            ))}
-          </select>
-          <select value={predictor} onChange={(e) => setPredictor(e.target.value as "heuristic" | "llm")}>
-            <option value="heuristic">heuristic</option>
-            <option value="llm">llm</option>
-          </select>
-          <button onClick={compact} disabled={!selectedRun || !!busy}>
-            {busy === "compact" ? "Compacting…" : "Compact"}
-          </button>
-          <button onClick={evaluate} disabled={!selectedRun || !!busy}>
-            {busy === "evaluate" ? "Checking…" : "Evaluate"}
-          </button>
-          <button className="primary" onClick={compare} disabled={!selectedRun || !!busy}>
-            {busy === "compare" ? "Comparing…" : "Compare to screenshots"}
-          </button>
+        <div className="bar-right">
+          {runs.length > 0 ? (
+            <label className="run-switch">
+              Run
+              <select value={selectedRun} onChange={(e) => setSelectedRun(e.target.value)}>
+                {runs.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+          <div className="tools">
+            <button className="ghost" onClick={() => setToolsOpen((v) => !v)} disabled={!selectedRun}>
+              Recompute {toolsOpen ? "▴" : "▾"}
+            </button>
+            {toolsOpen ? (
+              <div className="tools-pop" onMouseLeave={() => setToolsOpen(false)}>
+                <label>
+                  Predictor
+                  <select
+                    value={predictor}
+                    onChange={(e) => setPredictor(e.target.value as "heuristic" | "llm")}
+                  >
+                    <option value="heuristic">heuristic</option>
+                    <option value="llm">llm</option>
+                  </select>
+                </label>
+                <button onClick={compact} disabled={!!busy}>
+                  {busy === "compact" ? "Compacting…" : "Compact run"}
+                </button>
+                <button onClick={evaluate} disabled={!!busy}>
+                  {busy === "evaluate" ? "Checking…" : "Check next moves"}
+                </button>
+                <button onClick={compare} disabled={!!busy}>
+                  {busy === "compare" ? "Comparing…" : "Compare to screenshots"}
+                </button>
+              </div>
+            ) : null}
+          </div>
         </div>
       </header>
 
       {observations.length ? (
-        <Headline t={totals} />
+        <section className="hero">
+          <h1>Same decisions, far less context.</h1>
+          <div className="hero-stats">
+            <div className="metric">
+              <span className="num good">{totals.reductionPct.toFixed(0)}%</span>
+              <span className="cap">
+                fewer tokens
+                <i>
+                  {totals.compactTokens.toLocaleString()} vs {totals.baselineTokens.toLocaleString()}
+                </i>
+              </span>
+            </div>
+            <span className="divider" />
+            <div className="metric">
+              <span className="num">{hasEval ? `${totals.matched}/${totals.total}` : "—"}</span>
+              <span className="cap">
+                moves match screenshots
+                <i>
+                  {hasEval
+                    ? totals.baselineMatched !== null
+                      ? `baseline ${totals.baselineMatched}/${totals.total}`
+                      : "next action verified"
+                    : "run a check to verify"}
+                </i>
+              </span>
+            </div>
+          </div>
+        </section>
       ) : (
         <p className="hint">
           {status === "offline"
-            ? "Can't reach the API. Start the backend, then reload."
-            : "Pick a run and press Compact to see how much page context BrowserDelta removes."}
+            ? "Can't reach the API — start the backend and reload."
+            : "Pick a run and Recompute → Compact to see how much page context is removed."}
         </p>
       )}
 
@@ -178,15 +222,14 @@ function App() {
             {observations.map((o) => {
               const raw = detail?.steps.find((s) => s.step === o.step);
               const replay = detail?.eval_report?.steps.find((s) => s.step === o.step);
-              const selected = o.step === current?.step;
               return (
                 <button
                   key={o.step}
                   className="step"
-                  data-on={selected}
+                  data-on={o.step === current?.step}
                   onClick={() => setSelectedStep(o.step)}
                 >
-                  <span className="step-head">
+                  <span className="step-top">
                     <span className="step-n">Step {o.step}</span>
                     <Mark replay={replay} />
                   </span>
@@ -199,85 +242,12 @@ function App() {
 
           <section className="stage">
             {current ? (
-              <StepView
-                runId={selectedRun}
-                obs={current}
-                raw={currentRaw}
-                replay={currentReplay}
-              />
+              <StepView runId={selectedRun} obs={current} raw={currentRaw} replay={currentReplay} />
             ) : null}
           </section>
         </div>
       ) : null}
     </main>
-  );
-}
-
-function Headline({ t }: { t: Totals }) {
-  const hasEval = t.matched !== null && t.total !== null;
-  return (
-    <section className="headline">
-      <div className="headline-copy">
-        <h1>{hasEval ? "Same decisions, far less context." : "Far less context per step."}</h1>
-        <p>
-          {hasEval ? (
-            <>
-              The agent chose the correct next move <strong>{t.matched}</strong> of{" "}
-              <strong>{t.total}</strong> times reading only BrowserDelta&rsquo;s text
-              {t.baselineMatched !== null ? (
-                <> — the same as full screenshots ({t.baselineMatched}/{t.total})</>
-              ) : null}
-              , while sending <strong>{t.reductionPct.toFixed(0)}% fewer tokens</strong>.
-            </>
-          ) : (
-            <>
-              Compacting replaces every screenshot with a few lines of text, cutting tokens by{" "}
-              <strong>{t.reductionPct.toFixed(0)}%</strong>. Press Evaluate to confirm the agent
-              still makes the right moves.
-            </>
-          )}
-        </p>
-      </div>
-      <div className="headline-stats">
-        <Stat
-          big={t.reductionPct.toFixed(0) + "%"}
-          label="fewer tokens"
-          sub={`${t.compactTokens.toLocaleString()} vs ${t.baselineTokens.toLocaleString()}`}
-          good
-        />
-        <Stat
-          big={hasEval ? `${t.matched}/${t.total}` : "—"}
-          label="correct moves"
-          sub={
-            hasEval
-              ? t.baselineMatched !== null
-                ? `screenshots: ${t.baselineMatched}/${t.total}`
-                : "next action matched"
-              : "run Evaluate"
-          }
-        />
-      </div>
-    </section>
-  );
-}
-
-function Stat({
-  big,
-  label,
-  sub,
-  good,
-}: {
-  big: string;
-  label: string;
-  sub: string;
-  good?: boolean;
-}) {
-  return (
-    <div className="stat" data-good={!!good}>
-      <span className="stat-big">{big}</span>
-      <span className="stat-label">{label}</span>
-      <span className="stat-sub">{sub}</span>
-    </div>
   );
 }
 
@@ -297,29 +267,24 @@ function StepView({
 
   return (
     <>
-      <div className="stage-head">
-        <h2>{describeAction(raw?.action)}</h2>
-        <span className="muted">Step {obs.step}</span>
-      </div>
-
       <div className="compare">
         <article className="pane">
           <header>
-            <span className="pane-title">A full screenshot sends this</span>
-            <span className="pane-cost">≈ {obs.baseline_tokens_estimate.toLocaleString()} tokens</span>
+            <span className="pane-title">Full screenshot</span>
+            <span className="pane-cost">{obs.baseline_tokens_estimate.toLocaleString()} tokens</span>
           </header>
           <div className="pane-body shot">
             {screenshot ? (
-              <img src={fileUrl(runId, screenshot)} alt={`Step ${obs.step} page`} loading="lazy" />
+              <img src={fileUrl(runId, screenshot)} alt={`Step ${obs.step}`} loading="lazy" />
             ) : (
-              <p className="muted pad">No screenshot recorded for this step.</p>
+              <p className="muted">No screenshot recorded.</p>
             )}
           </div>
         </article>
 
-        <article className="pane accent">
+        <article className="pane">
           <header>
-            <span className="pane-title">BrowserDelta sends this</span>
+            <span className="pane-title">BrowserDelta</span>
             <span className="pane-cost good">
               {obs.tokens_estimate.toLocaleString()} tokens · −{Math.round(obs.reduction_pct)}%
             </span>
@@ -328,7 +293,9 @@ function StepView({
             <pre className="obs">{obs.llm_observation}</pre>
             {crops.length ? (
               <div className="crops">
-                <span className="muted">plus {crops.length} small crop{crops.length > 1 ? "s" : ""} of what changed:</span>
+                <span className="muted">
+                  + {crops.length} crop{crops.length > 1 ? "s" : ""} of what changed
+                </span>
                 <div className="crop-row">
                   {crops.map((c) => (
                     <img key={c} src={fileUrl(runId, c)} alt="changed region" loading="lazy" />
@@ -340,33 +307,25 @@ function StepView({
         </article>
       </div>
 
-      {replay ? (
-        <div className="outcome" data-pass={replay.passed}>
-          <div className="outcome-row">
-            <div className="move">
-              <span className="muted">Correct next move</span>
-              <strong>{describeAction(replay.expected_next_action)}</strong>
-            </div>
-            <span className="arrow">→</span>
-            <div className="move">
-              <span className="muted">Agent chose, from the text alone</span>
-              <strong>{describeAction(replay.predicted_next_action)}</strong>
-            </div>
-            <span className="result">{replay.passed ? "Match" : "Miss"}</span>
-          </div>
-          {replay.rationale ? <p className="why">{replay.rationale}</p> : null}
-        </div>
-      ) : (
-        <p className="hint small">Press Evaluate to see whether the agent picks the right next move from this text.</p>
-      )}
+      <div className="outcome">
+        <span className="outcome-label">Next move</span>
+        <strong className="outcome-move">{describeAction(replay?.expected_next_action ?? raw?.action)}</strong>
+        {replay ? (
+          <span className={`outcome-result ${replay.passed ? "pass" : "fail"}`}>
+            {replay.passed ? "agent agreed" : "agent differed"}
+          </span>
+        ) : (
+          <span className="muted outcome-result">not checked</span>
+        )}
+      </div>
     </>
   );
 }
 
 function Mark({ replay }: { replay?: ReplayStepResult }) {
-  if (!replay) return <span className="mark none" title="not evaluated" />;
+  if (!replay) return <span className="mark none" title="not checked" />;
   return (
-    <span className={`mark ${replay.passed ? "pass" : "fail"}`} title={replay.passed ? "correct move" : "wrong move"}>
+    <span className={`mark ${replay.passed ? "pass" : "fail"}`} title={replay.passed ? "agreed" : "differed"}>
       {replay.passed ? "✓" : "✗"}
     </span>
   );
@@ -410,7 +369,7 @@ function summarize(detail: RunDetail | null): Totals {
 }
 
 function describeAction(a?: BrowserAction | null): string {
-  if (!a) return "unknown action";
+  if (!a) return "—";
   const q = (v?: string | null) => (v ? `“${v}”` : "");
   switch (a.type) {
     case "click":
