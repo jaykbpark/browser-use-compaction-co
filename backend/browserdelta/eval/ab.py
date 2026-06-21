@@ -22,6 +22,7 @@ We report, per step and in aggregate:
 * whether the predicted next action matches the expected next action
 * whether a fallback was needed
 """
+
 from __future__ import annotations
 
 import json
@@ -352,7 +353,9 @@ def _summarize_steps(steps: list[StepEval]) -> dict[str, Any]:
             "baseline_total": baseline_total,
             "compact_total": compact_total,
             "savings_pct": _savings_pct(baseline_total, compact_total),
-            "compression_ratio": round(baseline_total / compact_total, 2) if compact_total else None,
+            "compression_ratio": round(baseline_total / compact_total, 2)
+            if compact_total
+            else None,
         },
         "routes_compact": route_hist,
         "fallback": {
@@ -369,13 +372,23 @@ def _summarize_steps(steps: list[StepEval]) -> dict[str, Any]:
     }
 
 
+#: Predictors the next-action grounding step supports. The eval ships with a
+#: deterministic heuristic planner only; this list is the extension point for an
+#: optional LLM planner without changing the call sites.
+SUPPORTED_PREDICTORS = ("heuristic",)
+
+
 def evaluate_run(
     run_path: Path,
     task: dict[str, Any] | None = None,
     config: EvalConfig | None = None,
     compact_if_missing: bool = True,
+    predictor: str = "heuristic",
 ) -> dict[str, Any]:
     """Evaluate a single recorded run; returns a JSON-serializable report section."""
+
+    if predictor not in SUPPORTED_PREDICTORS:
+        raise ValueError(f"unsupported predictor {predictor!r}; choose from {SUPPORTED_PREDICTORS}")
 
     cfg = config or EvalConfig()
     run_path = Path(run_path)
@@ -387,7 +400,11 @@ def evaluate_run(
     if observations_path.exists():
         observations = [
             CompactObservation.model_validate(row)
-            for row in (json.loads(line) for line in observations_path.read_text().splitlines() if line.strip())
+            for row in (
+                json.loads(line)
+                for line in observations_path.read_text().splitlines()
+                if line.strip()
+            )
         ]
     elif compact_if_missing:
         observations = compact_run(run_path)
@@ -512,7 +529,9 @@ def _overall_summary(task_reports: list[dict[str, Any]]) -> dict[str, Any]:
             "baseline_total": baseline_total,
             "compact_total": compact_total,
             "savings_pct": _savings_pct(baseline_total, compact_total),
-            "compression_ratio": round(baseline_total / compact_total, 2) if compact_total else None,
+            "compression_ratio": round(baseline_total / compact_total, 2)
+            if compact_total
+            else None,
         },
         "routes_compact": route_hist,
         "fallback": {

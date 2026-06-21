@@ -1,0 +1,12 @@
+{
+  "id": "search_filter",
+  "goal": "Filter a fruit table, add a filtered result to the cart, then reset and re-filter.",
+  "start_url": "demo_pages/search_filter.html",
+  "actions": [
+    {"type": "type", "target": "Search fruits", "text": "berry"},
+    {"type": "click", "target": "Add Strawberry"},
+    {"type": "click", "target": "Reset"},
+    {"type": "type", "target": "Search fruits", "text": "cherry"}
+  ],
+  "success_hint": "Filtering hides non-matching rows and updates the count; adding a fruit increments the cart and disables its button."
+}

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Record a raw BrowserDelta run from a task file under tasks/."""
+
 from __future__ import annotations
 
 import argparse
@@ -16,9 +17,18 @@ from browserdelta.browserbase.session import open_page  # noqa: E402
 from browserdelta.schemas import BrowserAction  # noqa: E402
 
 
+def resolve_start_url(start_url: str) -> str:
+    """Resolve a task start_url. A path with no scheme is treated as a repo-local
+    file and converted to a file:// URL so demo pages run fully offline."""
+
+    if "://" in start_url:
+        return start_url
+    return (ROOT / start_url).resolve().as_uri()
+
+
 async def record_task(task: dict, headless: bool = True) -> str:
     run_id = task["id"]
-    start_url = task["start_url"]
+    start_url = resolve_start_url(task["start_url"])
     actions = [BrowserAction.model_validate(action) for action in task["actions"]]
 
     async with open_page(headless=headless) as (page, mode):
