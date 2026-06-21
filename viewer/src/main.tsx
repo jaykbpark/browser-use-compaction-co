@@ -299,18 +299,22 @@ function App() {
     <main className="app-shell">
       <header className="hero">
         <div>
-          <p className="eyebrow">BrowserDelta</p>
-          <h1>Compact browser context, keep the next action.</h1>
+          <p className="eyebrow">Replay evaluator</p>
+          <h1>BrowserDelta replay</h1>
           <p className="hero-copy">
-            Pick a replay step. The left side shows the browser; the right side shows
-            what the model sees with full context versus BrowserDelta.
+            Compare the full browser payload with the compact delta used to predict
+            the next action.
           </p>
         </div>
-        <div className="hero-score" aria-label="Demo result">
-          <span>{summary.compactPassed}/{summary.evaluated}</span>
-          <small>compact parity</small>
-          <strong>{formatPct(summary.tokenReductionPct)}</strong>
-          <small>less context</small>
+        <div className="hero-stats" aria-label="Demo result">
+          <span>
+            <strong>{summary.compactPassed}/{summary.evaluated}</strong>
+            compact
+          </span>
+          <span>
+            <strong>{formatPct(summary.tokenReductionPct)}</strong>
+            saved
+          </span>
         </div>
       </header>
 
