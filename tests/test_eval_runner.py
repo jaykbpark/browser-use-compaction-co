@@ -230,6 +230,71 @@ def test_evaluate_run_resolves_interactive_refs_before_scoring(tmp_path: Path, m
     assert report.steps[0].predicted_next_action.target == "Refresh chart"
 
 
+def test_evaluate_run_resolves_label_to_expected_browsergym_ref(
+    tmp_path: Path, monkeypatch
+):
+    class FakeLLMReplayAgent:
+        name = "llm:fake"
+
+        def __init__(self, **kwargs):
+            pass
+
+        def predict_next_action(
+            self,
+            goal: str,
+            observation: CompactObservation,
+            previous_action: BrowserAction | None = None,
+            action_history: list[BrowserAction] | None = None,
+        ) -> ReplayPrediction:
+            return ReplayPrediction(
+                action=BrowserAction(type="click", target="TWO"),
+                rationale="The next required BrowserGym button is TWO.",
+                confidence=0.9,
+            )
+
+    import browserdelta.eval.runner as runner
+
+    monkeypatch.setattr(runner, "LLMReplayAgent", FakeLLMReplayAgent)
+    write_manifest(
+        tmp_path,
+        RunManifest(
+            run_id="browsergym_ref_fixture",
+            start_url="about:miniwob",
+            mode="local",
+            metadata={
+                "source": "browsergym",
+                "goal": "Click button ONE, then click button TWO.",
+            },
+        ),
+    )
+    write_steps(
+        tmp_path,
+        [
+            _step(1, BrowserAction(type="click", target="12")),
+            _step(2, BrowserAction(type="click", target="13")),
+        ],
+    )
+    write_compact_observations(
+        tmp_path,
+        [
+            _observation(
+                1,
+                "Buttons ONE and TWO are visible.",
+                "Current interactive elements: 12 button: ONE; 13 button: TWO",
+                [
+                    InteractiveElement(ref="12", role="button", name="ONE"),
+                    InteractiveElement(ref="13", role="button", name="TWO"),
+                ],
+            )
+        ],
+    )
+
+    report = evaluate_run(tmp_path, predictor="llm")
+
+    assert report.passed_steps == 1
+    assert report.steps[0].predicted_next_action.target == "13"
+
+
 def test_evaluate_run_can_score_full_state_baseline(tmp_path: Path):
     write_manifest(
         tmp_path,
