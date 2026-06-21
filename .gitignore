@@ -15,6 +15,7 @@ __pycache__/
 node_modules/
 viewer/dist/
 viewer/.vite/
+video/out/
 
 runs/*
 !runs/.gitkeep
