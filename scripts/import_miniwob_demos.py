@@ -267,7 +267,7 @@ def extract_demo_actions(data: dict[str, Any]) -> list[DemoAction]:
         if event.get("timing") != 3:
             continue
         event_type = str(event.get("type") or "")
-        target = _recording_target(state.get("dom") or {})
+        target = _event_target(state, event, prefer_focused=event_type.startswith("key"))
 
         if event_type == "keypress" and int(event.get("charCode") or 0) > 0:
             char = chr(int(event["charCode"]))
@@ -476,11 +476,130 @@ def _target_key(node: dict[str, Any] | None) -> str:
     )
 
 
+def _event_target(
+    state: dict[str, Any],
+    event: dict[str, Any],
+    *,
+    prefer_focused: bool = False,
+) -> dict[str, Any] | None:
+    dom = state.get("dom") or {}
+    recording = _recording_target(dom)
+    if recording and _target_label(recording):
+        return recording
+
+    if prefer_focused:
+        focused = _focused_target(dom)
+        if focused and _target_label(focused):
+            return focused
+
+    coordinate = _coordinate_target(dom, event)
+    if coordinate and _target_label(coordinate):
+        return coordinate
+
+    if not prefer_focused:
+        focused = _focused_target(dom)
+        if focused and _target_label(focused):
+            return focused
+
+    return recording
+
+
 def _recording_target(dom: dict[str, Any]) -> dict[str, Any] | None:
     for node in _walk_dom(dom):
         if node.get("recordingTarget"):
             return node
     return None
+
+
+def _focused_target(dom: dict[str, Any]) -> dict[str, Any] | None:
+    for node in _walk_dom(dom):
+        if node.get("focused"):
+            return node
+    return None
+
+
+def _coordinate_target(dom: dict[str, Any], event: dict[str, Any]) -> dict[str, Any] | None:
+    point = _event_point(event)
+    if point is None:
+        return None
+    x, y = point
+
+    containing: list[tuple[float, int, dict[str, Any]]] = []
+    nearest: list[tuple[float, float, int, dict[str, Any]]] = []
+    for depth, node in _walk_dom_with_depth(dom):
+        box = _node_box(node)
+        if box is None or not _has_target_signal(node):
+            continue
+        left, top, width, height = box
+        area = max(width * height, 1.0)
+        if left <= x <= left + width and top <= y <= top + height:
+            containing.append((area, -depth, node))
+            continue
+        distance = _distance_to_box(x, y, left, top, width, height)
+        nearest.append((distance, area, -depth, node))
+
+    if containing:
+        _, _, node = sorted(containing, key=lambda item: item[:2])[0]
+        return node
+    if nearest:
+        distance, _, _, node = sorted(nearest, key=lambda item: item[:3])[0]
+        if distance <= 24:
+            return node
+    return None
+
+
+def _event_point(event: dict[str, Any]) -> tuple[float, float] | None:
+    x = event.get("x", event.get("cx"))
+    y = event.get("y", event.get("cy"))
+    if x is None or y is None:
+        return None
+    try:
+        return float(x), float(y)
+    except (TypeError, ValueError):
+        return None
+
+
+def _node_box(node: dict[str, Any]) -> tuple[float, float, float, float] | None:
+    try:
+        left = float(node.get("left"))
+        top = float(node.get("top"))
+        width = float(node.get("width"))
+        height = float(node.get("height"))
+    except (TypeError, ValueError):
+        return None
+    if width <= 0 or height <= 0:
+        return None
+    return left, top, width, height
+
+
+def _distance_to_box(
+    x: float,
+    y: float,
+    left: float,
+    top: float,
+    width: float,
+    height: float,
+) -> float:
+    dx = max(left - x, 0.0, x - (left + width))
+    dy = max(top - y, 0.0, y - (top + height))
+    return (dx * dx + dy * dy) ** 0.5
+
+
+def _has_target_signal(node: dict[str, Any]) -> bool:
+    return bool(
+        _node_ref(node)
+        or _node_text(node)
+        or node.get("id")
+        or node.get("classes")
+        or node.get("value")
+    )
+
+
+def _walk_dom_with_depth(node: dict[str, Any], depth: int = 0):
+    yield depth, node
+    for child in node.get("children") or []:
+        if isinstance(child, dict):
+            yield from _walk_dom_with_depth(child, depth + 1)
 
 
 def _node_ref(node: dict[str, Any] | None) -> str:
