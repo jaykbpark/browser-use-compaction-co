@@ -3,6 +3,17 @@
 BrowserDelta has one narrow job: turn raw browser state transitions into compact
 observations for an LLM-driven browser agent.
 
+## Demo Diagrams
+
+Use these generated PNGs for demo slides or README-style explanations:
+
+- Full system: `docs/assets/browserdelta-architecture.png`
+- Codec zoom-in: `docs/assets/browserdelta-codec-zoom.png`
+
+![BrowserDelta architecture](assets/browserdelta-architecture.png)
+
+![BrowserDelta codec zoom-in](assets/browserdelta-codec-zoom.png)
+
 ```text
 User task
   -> LLM planner
