@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from pathlib import Path
+from contextlib import contextmanager
 
 from browserdelta.eval.runner import evaluate_comparison, evaluate_run
+from browserdelta.observability.arize import ArizeEvalTracer
 from browserdelta.schemas import (
     ActionResult,
     BrowserAction,
@@ -390,6 +392,74 @@ def test_evaluate_comparison_writes_json_and_readable_summary(tmp_path: Path):
     assert "Vision full state baseline accuracy" in summary_text
 
 
+def test_evaluate_comparison_emits_arize_trace_spans(tmp_path: Path):
+    fake_tracer = FakeOtelTracer()
+    arize_tracer = ArizeEvalTracer(enabled=True, tracer=fake_tracer, project_name="test-project")
+    write_manifest(
+        tmp_path,
+        RunManifest(
+            run_id="arize_fixture",
+            start_url="https://app.test",
+            mode="local",
+            metadata={"goal": "Use jay@example.com as the email."},
+        ),
+    )
+    write_steps(
+        tmp_path,
+        [
+            _step(1, BrowserAction(type="click", target="Continue")),
+            _step(2, BrowserAction(type="type", target="Email", text="jay@example.com")),
+        ],
+    )
+    write_compact_observations(
+        tmp_path,
+        [
+            _observation(
+                1,
+                "Email is required",
+                "Email is required. Current interactive elements: e1 textbox: Email",
+                [InteractiveElement(ref="e1", role="textbox", name="Email")],
+            )
+        ],
+    )
+    _write_after_state(
+        tmp_path,
+        1,
+        text=["Email is required"],
+        interactive=[InteractiveElement(ref="e1", role="textbox", name="Email")],
+    )
+    _write_after_state(
+        tmp_path,
+        2,
+        text=["Email jay@example.com"],
+        interactive=[InteractiveElement(ref="e1", role="textbox", name="Email")],
+    )
+
+    report = evaluate_comparison(
+        tmp_path,
+        predictor="heuristic",
+        arize_tracer=arize_tracer,
+    )
+
+    assert report.summary.compact_passed_steps == 1
+    span_names = [span.name for span in fake_tracer.spans]
+    assert span_names == [
+        "browserdelta.eval.comparison",
+        "browserdelta.eval.run",
+        "browserdelta.eval.step",
+        "browserdelta.eval.run",
+        "browserdelta.eval.step",
+    ]
+    step_span = fake_tracer.spans[2]
+    assert step_span.attributes["openinference.span.kind"] == "EVALUATOR"
+    assert step_span.attributes["browserdelta.passed"] is True
+    assert step_span.attributes["browserdelta.compact_tokens"] == 20
+    assert step_span.attributes["browserdelta.baseline_tokens"] == 500
+    comparison_span = fake_tracer.spans[0]
+    assert comparison_span.attributes["browserdelta.verdict"] == "compact_matches_or_beats_baseline"
+    assert comparison_span.attributes["browserdelta.token_reduction_pct"] > 0
+
+
 def _step(step: int, action: BrowserAction) -> StepRecord:
     return StepRecord(
         step=step,
@@ -404,6 +474,30 @@ def _step(step: int, action: BrowserAction) -> StepRecord:
             state=f"steps/step_{step:03d}_after.json",
         ),
     )
+
+
+class FakeSpan:
+    def __init__(self, name: str) -> None:
+        self.name = name
+        self.attributes = {}
+        self.status = None
+
+    def set_attribute(self, key: str, value) -> None:
+        self.attributes[key] = value
+
+    def set_status(self, status) -> None:
+        self.status = status
+
+
+class FakeOtelTracer:
+    def __init__(self) -> None:
+        self.spans: list[FakeSpan] = []
+
+    @contextmanager
+    def start_as_current_span(self, name: str):
+        span = FakeSpan(name)
+        self.spans.append(span)
+        yield span
 
 
 def _write_after_state(

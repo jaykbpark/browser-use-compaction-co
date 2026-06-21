@@ -97,6 +97,7 @@ def test_eval_suite_json_output_accepts_task_files(tmp_path: Path, monkeypatch, 
         path: Path,
         goal: str | None = None,
         predictor: str = "heuristic",
+        **_kwargs,
     ) -> ReplayReport:
         calls.append((path, goal, predictor))
         return ReplayReport(
@@ -148,6 +149,7 @@ def test_eval_suite_compare_mode_aggregates_compact_vs_full_state(
         goal: str | None = None,
         predictor: str = "heuristic",
         baseline_context_mode: str = "vision_full_state",
+        **_kwargs,
     ) -> EvalComparisonReport:
         calls.append((path, goal, predictor, baseline_context_mode))
         compact = ReplayReport(

@@ -10,6 +10,8 @@ __pycache__/
 .ruff_cache/
 .mypy_cache/
 *.egg-info/
+.agents/
+skills-lock.json
 
 node_modules/
 viewer/dist/
@@ -21,3 +23,4 @@ runs/*
 **/crops/
 
 *.log
+.arize-tmp-traces/

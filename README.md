@@ -149,6 +149,42 @@ python scripts/eval_suite.py --predictor llm --compare --baseline-context full_s
 Task JSON resolves its `id` to `runs/<id>`; suite JSON can also pass a `runs`
 list of run folders.
 
+### Arize AX Tracing
+
+BrowserDelta can export replay eval traces to Arize AX. Each comparison becomes
+one trace with child spans for the compact run, baseline run, and every scored
+browser step. Step spans include route, fallback, visual diff metrics,
+expected/predicted actions, pass/fail, token estimates, and token savings.
+
+Install optional tracing dependencies:
+
+```bash
+pip install -e ".[observability]"
+```
+
+Set credentials in `.env`:
+
+```bash
+ARIZE_API_KEY="..."
+ARIZE_SPACE_ID="..."
+ARIZE_PROJECT_NAME="browserdelta-hackathon"
+```
+
+Send a single comparison to Arize:
+
+```bash
+python scripts/eval_run.py runs/local_checkout --predictor llm --compare --arize
+```
+
+Send a suite comparison:
+
+```bash
+python scripts/eval_suite.py --predictor llm --compare --arize runs/local_checkout runs/visual_canvas_chart runs/visual_progress_toast runs/visual_swatch_picker
+```
+
+If Arize credentials or optional packages are missing, evals still run normally
+and print a tracing-disabled warning.
+
 Run the checked-in smoke fixture:
 
 ```bash

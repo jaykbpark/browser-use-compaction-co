@@ -8,6 +8,7 @@ import time
 import urllib.error
 import urllib.request
 from collections.abc import Callable
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -85,13 +86,24 @@ class LLMReplayAgent:
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
         }
-        response = self.transport(
-            f"{self.base_url}/responses",
-            payload,
-            headers,
-            self.timeout,
-        )
-        parsed = _LLMActionPayload.model_validate(_extract_json_payload(response))
+        with _llm_prediction_span(
+            model=self.model,
+            context=context,
+            include_images=self.include_images,
+            vision_image_attached=bool(image_url),
+        ) as span:
+            try:
+                response = self.transport(
+                    f"{self.base_url}/responses",
+                    payload,
+                    headers,
+                    self.timeout,
+                )
+                parsed = _LLMActionPayload.model_validate(_extract_json_payload(response))
+            except Exception as exc:
+                _record_span_error(span, exc)
+                raise
+            _record_llm_prediction(span, parsed)
         return ReplayPrediction(
             action=BrowserAction(
                 type=parsed.type,
@@ -268,6 +280,75 @@ def _post_json(
 
     reason = last_error.reason if last_error else "unknown error"
     raise RuntimeError(f"OpenAI API request failed: {reason}")
+
+
+@contextmanager
+def _llm_prediction_span(
+    *,
+    model: str,
+    context: dict[str, Any],
+    include_images: bool,
+    vision_image_attached: bool,
+):
+    try:
+        from openinference.semconv.trace import OpenInferenceSpanKindValues, SpanAttributes
+        from opentelemetry import trace
+    except ImportError:
+        yield None
+        return
+
+    tracer = trace.get_tracer("browserdelta.eval.llm")
+    with tracer.start_as_current_span("browserdelta.llm.predict_next_action") as span:
+        span.set_attribute(
+            SpanAttributes.OPENINFERENCE_SPAN_KIND,
+            OpenInferenceSpanKindValues.LLM.value,
+        )
+        span.set_attribute(SpanAttributes.INPUT_VALUE, json.dumps(context, ensure_ascii=True))
+        span.set_attribute("llm.provider", "openai")
+        span.set_attribute("llm.model_name", model)
+        span.set_attribute("browserdelta.include_images", include_images)
+        span.set_attribute("browserdelta.vision_image_attached", vision_image_attached)
+        yield span
+
+
+def _record_llm_prediction(span, parsed: _LLMActionPayload) -> None:
+    if span is None:
+        return
+    output = {
+        "type": parsed.type,
+        "target": parsed.target,
+        "text": parsed.text,
+        "key": parsed.key,
+        "amount": parsed.amount,
+        "url": parsed.url,
+        "rationale": parsed.rationale,
+        "confidence": parsed.confidence,
+    }
+    span.set_attribute("output.value", json.dumps(output, ensure_ascii=True, sort_keys=True))
+    span.set_attribute("browserdelta.predicted_action.type", parsed.type)
+    span.set_attribute("browserdelta.predicted_action.target", parsed.target or "")
+    span.set_attribute("browserdelta.confidence", parsed.confidence)
+    _set_span_status(span, ok=True)
+
+
+def _record_span_error(span, exc: Exception) -> None:
+    if span is None:
+        return
+    record_exception = getattr(span, "record_exception", None)
+    if callable(record_exception):
+        record_exception(exc)
+    _set_span_status(span, ok=False, description=str(exc))
+
+
+def _set_span_status(span, ok: bool, description: str = "") -> None:
+    try:
+        from opentelemetry.trace import Status, StatusCode
+    except ImportError:
+        return
+    if ok:
+        span.set_status(Status(StatusCode.OK))
+    else:
+        span.set_status(Status(StatusCode.ERROR, description))
 
 
 def _extract_json_payload(response: dict[str, Any]) -> dict[str, Any]:
