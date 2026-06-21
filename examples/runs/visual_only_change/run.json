@@ -1,0 +1,10 @@
+{
+  "run_id": "visual_only_change",
+  "start_url": "https://demo.browserdelta.test/analytics",
+  "mode": "local",
+  "steps_path": "steps.jsonl",
+  "metadata": {
+    "fixture": true,
+    "description": "Canvas-style chart changes visually without a useful DOM diff."
+  }
+}

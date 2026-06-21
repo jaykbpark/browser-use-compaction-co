@@ -1,0 +1,10 @@
+{
+  "run_id": "modal_checkout",
+  "start_url": "https://demo.browserdelta.test/cart",
+  "mode": "local",
+  "steps_path": "steps.jsonl",
+  "metadata": {
+    "fixture": true,
+    "description": "Checkout button opens a modal with new form fields."
+  }
+}

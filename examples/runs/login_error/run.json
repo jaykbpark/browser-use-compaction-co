@@ -1,0 +1,10 @@
+{
+  "run_id": "login_error",
+  "start_url": "https://demo.browserdelta.test/login",
+  "mode": "local",
+  "steps_path": "steps.jsonl",
+  "metadata": {
+    "fixture": true,
+    "description": "Single-step login validation error fixture for the compaction smoke test."
+  }
+}

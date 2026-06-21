@@ -1,0 +1,11 @@
+{
+  "id": "visual_progress_toast",
+  "goal": "Start upload, advance upload, then finish upload to show the completion toast.",
+  "start_url": "demo_pages/visual_progress_toast.html",
+  "actions": [
+    {"type": "click", "target": "Start upload"},
+    {"type": "click", "target": "Advance upload"},
+    {"type": "click", "target": "Finish upload"}
+  ],
+  "success_hint": "The first two steps should preserve visual progress changes and the final step should report the toast."
+}

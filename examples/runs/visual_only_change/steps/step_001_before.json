@@ -1,0 +1,32 @@
+{
+  "url": "https://demo.browserdelta.test/analytics",
+  "title": "Analytics | BrowserDelta Demo",
+  "text": [
+    "Revenue dashboard",
+    "Canvas chart",
+    "Refresh chart"
+  ],
+  "interactive": [
+    {
+      "ref": "e1",
+      "role": "button",
+      "name": "Refresh chart",
+      "value": null,
+      "disabled": false,
+      "checked": null,
+      "selected": null,
+      "expanded": null,
+      "bbox": {"x": 520, "y": 92, "width": 140, "height": 40},
+      "attributes": {"id": "refresh-chart", "type": "button"}
+    }
+  ],
+  "focused_ref": null,
+  "console_errors": [],
+  "network_errors": [],
+  "screenshot": "steps/step_001_before.png",
+  "metadata": {
+    "capture_version": 1,
+    "fixture": true,
+    "canvas_state": "not_exposed"
+  }
+}

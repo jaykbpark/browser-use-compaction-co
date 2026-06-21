@@ -1,0 +1,1 @@
+{"step":1,"action":{"type":"click","target":"Refresh chart","text":null,"key":null,"amount":null,"url":null,"metadata":{}},"result":{"ok":true,"message":"click executed","error":null},"before":{"screenshot":"steps/step_001_before.png","state":"steps/step_001_before.json"},"after":{"screenshot":"steps/step_001_after.png","state":"steps/step_001_after.json"}}

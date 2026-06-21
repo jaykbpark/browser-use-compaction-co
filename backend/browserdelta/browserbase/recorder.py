@@ -12,21 +12,36 @@ from browserdelta.storage import append_jsonl, run_dir, write_json, write_manife
 
 
 class StepRecorder:
-    def __init__(self, run_id: str, start_url: str, mode: str, reset_existing: bool = True) -> None:
+    def __init__(
+        self,
+        run_id: str,
+        start_url: str,
+        mode: str,
+        reset_existing: bool = True,
+        steps_path: str = "steps.jsonl",
+        metadata: dict | None = None,
+    ) -> None:
         self.run_id = run_id
         self.path = run_dir(run_id)
         self.steps_dir = self.path / "steps"
+        self.steps_path = steps_path
         self.step_index = 0
         if reset_existing:
             self._reset_run_files()
         write_manifest(
             self.path,
-            RunManifest(run_id=run_id, start_url=start_url, mode=mode),  # type: ignore[arg-type]
+            RunManifest(
+                run_id=run_id,
+                start_url=start_url,
+                mode=mode,  # type: ignore[arg-type]
+                steps_path=steps_path,
+                metadata=metadata or {},
+            ),
         )
 
     def _reset_run_files(self) -> None:
         for path in [
-            self.path / "steps.jsonl",
+            self.path / self.steps_path,
             self.path / "compact_observations.jsonl",
         ]:
             if path.exists():
@@ -50,12 +65,16 @@ class StepRecorder:
             before=before_pointer,
             after=after_pointer,
         )
-        append_jsonl(self.path / "steps.jsonl", record)
+        append_jsonl(self.path / self.steps_path, record)
         return record
 
     async def _capture(self, page: Page, name: str) -> StatePointer:
         screenshot_rel = Path("steps") / f"{name}.png"
         state_rel = Path("steps") / f"{name}.json"
-        state = await capture_state(page, self.path / screenshot_rel)
+        state = await capture_state(
+            page,
+            self.path / screenshot_rel,
+            screenshot_ref=screenshot_rel.as_posix(),
+        )
         write_json(self.path / state_rel, state)
         return StatePointer(screenshot=str(screenshot_rel), state=str(state_rel))

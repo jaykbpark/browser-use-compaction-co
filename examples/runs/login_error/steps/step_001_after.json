@@ -1,0 +1,57 @@
+{
+  "url": "https://demo.browserdelta.test/login",
+  "title": "Login | BrowserDelta Demo",
+  "text": [
+    "Welcome back",
+    "Email",
+    "Email is required",
+    "Password",
+    "Sign in"
+  ],
+  "interactive": [
+    {
+      "ref": "e1",
+      "role": "textbox",
+      "name": "Email",
+      "value": "",
+      "disabled": false,
+      "checked": null,
+      "selected": null,
+      "expanded": null,
+      "bbox": {"x": 170, "y": 154, "width": 300, "height": 44},
+      "attributes": {"id": "email", "name": "email", "type": "email", "autocomplete": "email", "aria-invalid": "true"}
+    },
+    {
+      "ref": "e2",
+      "role": "textbox",
+      "name": "Password",
+      "value": "",
+      "disabled": false,
+      "checked": null,
+      "selected": null,
+      "expanded": null,
+      "bbox": {"x": 170, "y": 246, "width": 300, "height": 44},
+      "attributes": {"id": "password", "name": "password", "type": "password"}
+    },
+    {
+      "ref": "e3",
+      "role": "button",
+      "name": "Sign in",
+      "value": null,
+      "disabled": false,
+      "checked": null,
+      "selected": null,
+      "expanded": null,
+      "bbox": {"x": 170, "y": 314, "width": 300, "height": 44},
+      "attributes": {"id": "submit", "type": "submit"}
+    }
+  ],
+  "focused_ref": "e1",
+  "console_errors": [],
+  "network_errors": [],
+  "screenshot": "steps/step_001_after.png",
+  "metadata": {
+    "capture_version": 1,
+    "fixture": true
+  }
+}

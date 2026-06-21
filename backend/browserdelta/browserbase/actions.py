@@ -32,6 +32,7 @@ async def execute_action(page: Page, action: BrowserAction) -> ActionResult:
             case "wait":
                 await page.wait_for_timeout(action.amount or 1000)
         await page.wait_for_load_state("domcontentloaded")
+        await _wait_for_visual_settle(page)
         return ActionResult(ok=True, message=f"{action.type} executed")
     except PlaywrightTimeoutError as exc:
         return ActionResult(ok=False, error=f"timeout: {exc}")
@@ -65,3 +66,12 @@ async def _locator_for_target(page: Page, target: str):
             return locator
 
     return page.get_by_text(target, exact=False).first
+
+
+async def _wait_for_visual_settle(page: Page) -> None:
+    try:
+        await page.evaluate(
+            "() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))"
+        )
+    except Exception:  # noqa: BLE001 - visual settle is best-effort
+        await page.wait_for_timeout(50)

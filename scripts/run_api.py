@@ -1,8 +1,23 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import argparse
+
 import uvicorn
 
 
 if __name__ == "__main__":
-    uvicorn.run("browserdelta.main:app", app_dir="backend", host="127.0.0.1", port=8000, reload=True)
+    parser = argparse.ArgumentParser(description="Run the BrowserDelta API.")
+    parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument("--port", type=int, default=8000)
+    parser.add_argument("--reload", action="store_true")
+    args = parser.parse_args()
+
+    uvicorn.run(
+        "browserdelta.main:app",
+        app_dir="backend",
+        host=args.host,
+        port=args.port,
+        reload=args.reload,
+        reload_dirs=["backend"] if args.reload else None,
+    )

@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BrowserDelta Visual Canvas Chart</title>
+    <style>
+      :root {
+        color: #172026;
+        background: #f4f7fb;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+      }
+
+      main {
+        min-height: 100vh;
+        padding: 44px;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: 32px;
+        line-height: 1.1;
+        letter-spacing: 0;
+      }
+
+      p {
+        margin: 0 0 22px;
+        color: #5a6872;
+        line-height: 1.45;
+      }
+
+      .chart-card {
+        width: 820px;
+        max-width: calc(100vw - 88px);
+        border: 1px solid #d4dde6;
+        border-radius: 8px;
+        background: #ffffff;
+        padding: 20px;
+      }
+
+      canvas {
+        display: block;
+        width: 100%;
+        height: auto;
+        border-radius: 6px;
+      }
+
+      .actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 18px;
+      }
+
+      [role="button"] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        border-radius: 6px;
+        background: #1565c0;
+        color: #ffffff;
+        cursor: pointer;
+        font-weight: 700;
+        padding: 0 16px;
+        user-select: none;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Revenue Mix</h1>
+      <p>The chart redraws on canvas without changing visible text or form state.</p>
+
+      <section class="chart-card" aria-label="Canvas chart benchmark">
+        <canvas id="chart" width="780" height="320" aria-label="Quarterly revenue chart"></canvas>
+        <div class="actions">
+          <div
+            id="next-frame"
+            role="button"
+            aria-label="Next chart frame"
+            tabindex="-1"
+            data-testid="next-chart-frame"
+          >
+            Next chart frame
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const chart = document.getElementById("chart");
+      const ctx = chart.getContext("2d");
+      const nextFrame = document.getElementById("next-frame");
+      let frame = 0;
+
+      const palettes = [
+        ["#0b6bcb", "#0e7c66", "#f59f00", "#7c3aed"],
+        ["#b42318", "#0f766e", "#7c2d12", "#334155"],
+        ["#155e75", "#2f855a", "#c2410c", "#6d28d9"],
+        ["#075985", "#047857", "#ca8a04", "#be123c"],
+      ];
+
+      const values = [
+        [205, 118, 166, 86],
+        [92, 196, 124, 214],
+        [176, 142, 224, 112],
+        [130, 232, 94, 176],
+      ];
+
+      function drawChart() {
+        const palette = palettes[frame % palettes.length];
+        const set = values[frame % values.length];
+        const bg = frame % 2 === 0 ? "#f8fbff" : "#fff7ed";
+        const plot = frame % 2 === 0 ? "#e8f2ff" : "#ffedd5";
+
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, chart.width, chart.height);
+        ctx.fillStyle = plot;
+        ctx.fillRect(48, 38, 684, 230);
+
+        ctx.strokeStyle = frame % 2 === 0 ? "#b6c6d8" : "#f4b183";
+        ctx.lineWidth = 2;
+        for (let y = 66; y <= 238; y += 43) {
+          ctx.beginPath();
+          ctx.moveTo(48, y);
+          ctx.lineTo(732, y);
+          ctx.stroke();
+        }
+
+        set.forEach((height, index) => {
+          const x = 92 + index * 156;
+          const y = 268 - height;
+          ctx.fillStyle = palette[index];
+          ctx.fillRect(x, y, 84, height);
+          ctx.fillStyle = "rgba(255, 255, 255, 0.38)";
+          ctx.fillRect(x + 12, y + 12, 18, Math.max(height - 24, 0));
+        });
+
+        ctx.strokeStyle = "#102a43";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        set.forEach((height, index) => {
+          const x = 134 + index * 156;
+          const y = 268 - height;
+          if (index === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            ctx.lineTo(x, y);
+          }
+        });
+        ctx.stroke();
+      }
+
+      nextFrame.addEventListener("click", () => {
+        frame += 1;
+        drawChart();
+      });
+
+      drawChart();
+    </script>
+  </body>
+</html>

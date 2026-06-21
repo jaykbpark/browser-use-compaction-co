@@ -12,6 +12,9 @@ class Settings:
         self.browserbase_connect_url = os.getenv("BROWSERBASE_CONNECT_URL", "").strip()
         self.browserbase_api_key = os.getenv("BROWSERBASE_API_KEY", "").strip()
         self.browserbase_project_id = os.getenv("BROWSERBASE_PROJECT_ID", "").strip()
+        self.openai_api_key = os.getenv("OPENAI_API_KEY", "").strip()
+        self.openai_model = os.getenv("OPENAI_MODEL", "gpt-4.1-mini").strip()
+        self.openai_base_url = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1").strip()
         self.runs_dir = Path(os.getenv("RUNS_DIR", "runs"))
 
 

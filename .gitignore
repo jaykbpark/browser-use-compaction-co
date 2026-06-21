@@ -17,5 +17,7 @@ viewer/.vite/
 
 runs/*
 !runs/.gitkeep
+**/compact_observations.jsonl
+**/crops/
 
 *.log

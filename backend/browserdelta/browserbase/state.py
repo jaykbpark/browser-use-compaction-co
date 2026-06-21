@@ -10,6 +10,7 @@ from browserdelta.schemas import BoundingBox, InteractiveElement, PageState
 async def capture_state(
     page: Page,
     screenshot_path: Path,
+    screenshot_ref: str | None = None,
     console_errors: list[str] | None = None,
     network_errors: list[str] | None = None,
 ) -> PageState:
@@ -41,7 +42,7 @@ async def capture_state(
         focused_ref=payload.get("focused_ref"),
         console_errors=console_errors or [],
         network_errors=network_errors or [],
-        screenshot=str(screenshot_path),
+        screenshot=screenshot_ref or str(screenshot_path),
         metadata={"capture_version": 1},
     )
 
@@ -69,13 +70,24 @@ _STATE_CAPTURE_SCRIPT = r"""
     }
     if (tag === 'textarea') return 'textbox';
     if (tag === 'select') return 'combobox';
+    if (tag === 'canvas') return 'canvas';
+    if (tag === 'svg') return 'svg';
+    if (tag === 'img') return 'img';
     return tag;
   };
 
   const nameFor = (el) => {
+    const explicitLabel = el.id
+      ? Array.from(document.querySelectorAll('label')).find((label) => label.htmlFor === el.id)?.innerText
+      : '';
     return (
+      explicitLabel ||
+      el.getAttribute('data-browserdelta-label') ||
+      el.getAttribute('title') ||
+      el.getAttribute('aria-labelledby') && document.getElementById(el.getAttribute('aria-labelledby'))?.innerText ||
       el.getAttribute('aria-label') ||
       el.getAttribute('placeholder') ||
+      el.getAttribute('name') ||
       el.getAttribute('alt') ||
       el.innerText ||
       el.value ||
@@ -84,7 +96,19 @@ _STATE_CAPTURE_SCRIPT = r"""
     ).trim().replace(/\s+/g, ' ').slice(0, 160);
   };
 
-  const selector = 'button,a,input,textarea,select,[role],[contenteditable="true"]';
+  const selector = [
+    'button',
+    'a',
+    'input',
+    'textarea',
+    'select',
+    '[role]',
+    '[contenteditable="true"]',
+    'canvas',
+    'svg',
+    'img',
+    '[data-browserdelta-visual]'
+  ].join(',');
   const nodes = Array.from(document.querySelectorAll(selector)).filter(visible).slice(0, 120);
   const interactive = nodes.map((el, index) => {
     const rect = el.getBoundingClientRect();
@@ -102,6 +126,12 @@ _STATE_CAPTURE_SCRIPT = r"""
       bbox: {x: rect.x, y: rect.y, width: rect.width, height: rect.height},
       attributes: {
         id: el.id || null,
+        name: el.getAttribute('name'),
+        'aria-label': el.getAttribute('aria-label'),
+        'data-testid': el.getAttribute('data-testid'),
+        'data-test': el.getAttribute('data-test'),
+        'data-browserdelta-label': el.getAttribute('data-browserdelta-label'),
+        'data-browserdelta-visual': el.getAttribute('data-browserdelta-visual'),
         type: el.getAttribute('type'),
         href: el.getAttribute('href'),
       }

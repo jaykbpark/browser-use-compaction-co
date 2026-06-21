@@ -1,0 +1,32 @@
+{
+  "url": "https://demo.browserdelta.test/cart",
+  "title": "Cart | BrowserDelta Demo",
+  "text": [
+    "Cart",
+    "Noise-cancelling headphones",
+    "$129.00",
+    "Checkout"
+  ],
+  "interactive": [
+    {
+      "ref": "e1",
+      "role": "button",
+      "name": "Checkout",
+      "value": null,
+      "disabled": false,
+      "checked": null,
+      "selected": null,
+      "expanded": false,
+      "bbox": {"x": 470, "y": 312, "width": 180, "height": 44},
+      "attributes": {"id": "checkout", "type": "button"}
+    }
+  ],
+  "focused_ref": null,
+  "console_errors": [],
+  "network_errors": [],
+  "screenshot": "steps/step_001_before.png",
+  "metadata": {
+    "capture_version": 1,
+    "fixture": true
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "id": "visual_swatch_picker",
+  "goal": "Select Coral, then Mint, then Ocean, and verify selected visual state is represented.",
+  "start_url": "demo_pages/visual_swatch_picker.html",
+  "actions": [
+    {"type": "click", "target": "Coral"},
+    {"type": "click", "target": "Mint"},
+    {"type": "click", "target": "Ocean"}
+  ],
+  "success_hint": "Each step should capture checked radio state plus the selected swatch styling."
+}

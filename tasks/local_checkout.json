@@ -1,0 +1,12 @@
+{
+  "id": "local_checkout",
+  "goal": "Exercise validation, then use jay@example.com as the email, refresh the chart, and continue to open the checkout modal.",
+  "start_url": "demo_pages/local_checkout.html",
+  "actions": [
+    {"type": "click", "target": "Continue"},
+    {"type": "type", "target": "Email", "text": "jay@example.com"},
+    {"type": "click", "target": "Refresh chart"},
+    {"type": "click", "target": "Continue"}
+  ],
+  "success_hint": "Step 1 should be text-only validation, step 3 should use crop fallback, and step 4 should detect a modal."
+}

@@ -7,7 +7,14 @@ from typing import Iterable, TypeVar
 from pydantic import BaseModel
 
 from browserdelta.config import get_settings
-from browserdelta.schemas import CompactObservation, RunManifest, StepRecord
+from browserdelta.schemas import (
+    CompactObservation,
+    EvalComparisonReport,
+    ReplayContextMode,
+    ReplayReport,
+    RunManifest,
+    StepRecord,
+)
 
 
 T = TypeVar("T", bound=BaseModel)
@@ -68,7 +75,7 @@ def read_manifest(path: Path) -> RunManifest:
 
 
 def write_steps(path: Path, steps: Iterable[StepRecord]) -> None:
-    steps_path = path / "steps.jsonl"
+    steps_path = _steps_path(path)
     if steps_path.exists():
         steps_path.unlink()
     for step in steps:
@@ -76,7 +83,7 @@ def write_steps(path: Path, steps: Iterable[StepRecord]) -> None:
 
 
 def read_steps(path: Path) -> list[StepRecord]:
-    return [StepRecord.model_validate(row) for row in read_jsonl(path / "steps.jsonl")]
+    return [StepRecord.model_validate(row) for row in read_jsonl(_steps_path(path))]
 
 
 def write_compact_observations(path: Path, observations: Iterable[CompactObservation]) -> None:
@@ -85,3 +92,40 @@ def write_compact_observations(path: Path, observations: Iterable[CompactObserva
         out.unlink()
     for observation in observations:
         append_jsonl(out, observation)
+
+
+def write_eval_report(path: Path, report: ReplayReport) -> None:
+    write_json(path / _eval_report_name(report.context_mode), report)
+
+
+def read_eval_report(
+    path: Path, context_mode: ReplayContextMode = "compact"
+) -> ReplayReport | None:
+    report_path = path / _eval_report_name(context_mode)
+    if not report_path.exists():
+        return None
+    return ReplayReport.model_validate(read_json(report_path))
+
+
+def write_eval_comparison_report(path: Path, report: EvalComparisonReport) -> None:
+    write_json(path / "eval_comparison.json", report)
+
+
+def read_eval_comparison_report(path: Path) -> EvalComparisonReport | None:
+    report_path = path / "eval_comparison.json"
+    if not report_path.exists():
+        return None
+    return EvalComparisonReport.model_validate(read_json(report_path))
+
+
+def _steps_path(path: Path) -> Path:
+    manifest_path = path / "run.json"
+    if not manifest_path.exists():
+        return path / "steps.jsonl"
+    return path / read_manifest(path).steps_path
+
+
+def _eval_report_name(context_mode: ReplayContextMode) -> str:
+    if context_mode == "compact":
+        return "eval_report.json"
+    return f"eval_{context_mode}_report.json"

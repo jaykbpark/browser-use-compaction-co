@@ -1,0 +1,11 @@
+{
+  "id": "visual_canvas_chart",
+  "goal": "Redraw the canvas chart three times so BrowserDelta must preserve visual-only changes.",
+  "start_url": "demo_pages/visual_canvas_chart.html",
+  "actions": [
+    {"type": "click", "target": "Next chart frame"},
+    {"type": "click", "target": "Next chart frame"},
+    {"type": "click", "target": "Next chart frame"}
+  ],
+  "success_hint": "Each step should produce a canvas-only visual crop without new DOM text."
+}
