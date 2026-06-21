@@ -173,6 +173,9 @@ run folder. Resolve them as `runs/<run_id>/<path>` when reading files.
 
 - Use Python for backend and runner code.
 - Use Playwright Python for browser control.
+- For substantial or risky integrations, create a separate branch/worktree from
+  the latest verified checkpoint. Commit and push small verified slices instead
+  of leaving long-running work only in local changes.
 - Keep Browserbase credentials in `.env`; never commit secrets.
 - Keep OpenAI credentials in `.env`; never commit secrets.
 - Prefer `BROWSERBASE_API_KEY` for Browserbase sessions. `BROWSERBASE_PROJECT_ID`
