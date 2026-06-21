@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
 
 from browserdelta.eval.runner import evaluate_comparison, evaluate_run  # noqa: E402
+from browserdelta.observability.arize import start_arize_tracing  # noqa: E402
 
 
 def main() -> None:
@@ -33,16 +34,25 @@ def main() -> None:
         choices=["full_state", "vision_full_state"],
         help="Baseline context mode to use with --compare.",
     )
+    parser.add_argument("--arize", action="store_true", help="Emit Arize AX traces.")
+    parser.add_argument("--arize-project", help="Override ARIZE_PROJECT_NAME for this run.")
     parser.add_argument("--json", action="store_true", help="Print the full report JSON.")
     args = parser.parse_args()
+    tracer = start_arize_tracing(args.arize, project_name=args.arize_project)
+    if args.arize and not tracer.enabled:
+        print(f"Arize tracing disabled: {tracer.reason}", file=sys.stderr)
 
     if args.compare:
-        comparison = evaluate_comparison(
-            args.run_path,
-            goal=args.goal,
-            predictor=args.predictor,
-            baseline_context_mode=args.baseline_context,  # type: ignore[arg-type]
-        )
+        try:
+            comparison = evaluate_comparison(
+                args.run_path,
+                goal=args.goal,
+                predictor=args.predictor,
+                baseline_context_mode=args.baseline_context,  # type: ignore[arg-type]
+                arize_tracer=tracer,
+            )
+        finally:
+            tracer.flush()
         if args.json:
             print(json.dumps(comparison.model_dump(mode="json"), indent=2))
             return
@@ -63,12 +73,16 @@ def main() -> None:
         print(f"wrote {args.run_path / 'eval_summary.md'}")
         return
 
-    report = evaluate_run(
-        args.run_path,
-        goal=args.goal,
-        predictor=args.predictor,
-        context_mode=args.context_mode,  # type: ignore[arg-type]
-    )
+    try:
+        report = evaluate_run(
+            args.run_path,
+            goal=args.goal,
+            predictor=args.predictor,
+            context_mode=args.context_mode,  # type: ignore[arg-type]
+            arize_tracer=tracer,
+        )
+    finally:
+        tracer.flush()
 
     if args.json:
         print(json.dumps(report.model_dump(mode="json"), indent=2))

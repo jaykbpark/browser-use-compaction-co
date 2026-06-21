@@ -4,6 +4,7 @@ import base64
 import json
 import mimetypes
 import shutil
+import sys
 import time
 from collections import Counter
 from collections.abc import Callable
@@ -22,6 +23,7 @@ from browserdelta.compaction.renderer import (
     render_interactive_context,
 )
 from browserdelta.eval.llm_agent import _ACTION_SCHEMA, _extract_json_payload, _post_json
+from browserdelta.observability.arize import ArizeEvalTracer, noop_arize_tracer
 from browserdelta.external.browsergym_adapter import (
     BrowserGymUnavailable,
     format_browsergym_action,
@@ -265,12 +267,14 @@ def run_live_episode(
     seed: int | None = None,
     goal: str | None = None,
     gym_module: Any | None = None,
+    arize_tracer: ArizeEvalTracer | None = None,
 ) -> dict[str, Any]:
     if mode not in {"compact", "full_state", "vision_full_state"}:
         raise ValueError("mode must be compact, full_state, or vision_full_state.")
 
     gym = gym_module or require_browsergym(extra_modules=_extra_modules_for_env(env_id))
     policy = policy or HeuristicBrowserGymPolicy()
+    trace = arize_tracer or noop_arize_tracer()
     env = gym.make(env_id, headless=headless)
     run_path = run_dir(run_id)
     shutil.rmtree(run_path)
@@ -286,6 +290,14 @@ def run_live_episode(
     truncated = False
     error: str | None = None
     start = time.monotonic()
+    episode_cm = trace.live_episode_span(
+        env_id=env_id,
+        run_id=run_id,
+        mode=mode,
+        policy=policy.name,
+        goal=goal or env_id,
+    )
+    episode_span = episode_cm.__enter__()
 
     try:
         obs = _reset_env(env, seed)
@@ -324,20 +336,33 @@ def run_live_episode(
                 step_number=step_number,
                 previous_compact=previous_compact,
             )
-            raw_action = policy.choose_action(
-                goal=effective_goal,
-                observation=decision_observation,
-                page_state=page_state,
-                previous_action=previous_action,
-                action_history=action_history,
+            with trace.live_step_span(
+                env_id=env_id,
+                run_id=run_id,
                 mode=mode,
-                max_steps=max_steps,
-                artifact_root=run_path,
-            )
-            resolved_action = resolve_action_for_page(raw_action, page_state)
-            action_text = format_browsergym_action(resolved_action)
-            decisions.append(
-                {
+                step=step_number,
+                observation=decision_observation,
+            ) as step_span:
+                raw_action = policy.choose_action(
+                    goal=effective_goal,
+                    observation=decision_observation,
+                    page_state=page_state,
+                    previous_action=previous_action,
+                    action_history=action_history,
+                    mode=mode,
+                    max_steps=max_steps,
+                    artifact_root=run_path,
+                )
+                resolved_action = resolve_action_for_page(raw_action, page_state)
+                resolved_action = _apply_compact_hint_guard(
+                    resolved_action,
+                    page_state,
+                    decision_observation,
+                    action_history,
+                    mode,
+                )
+                action_text = format_browsergym_action(resolved_action)
+                decision_row = {
                     "step": step_number,
                     "mode": mode,
                     "observation_summary": decision_observation.summary,
@@ -347,7 +372,8 @@ def run_live_episode(
                     "resolved_action": resolved_action.model_dump(mode="json"),
                     "browsergym_action": action_text,
                 }
-            )
+                trace.record_live_step(step_span, decision_row)
+                decisions.append(decision_row)
 
             step_out = env.step(action_text)
             obs, reward, terminated, truncated, info = _unpack_step(step_out)
@@ -376,6 +402,10 @@ def run_live_episode(
                 break
     except Exception as exc:
         error = str(exc)
+        trace.record_live_episode(
+            episode_span,
+            _errored_result({"env_id": env_id, "goal": goal or ""}, mode, error, 1),
+        )
         raise
     finally:
         env.close()
@@ -395,6 +425,32 @@ def run_live_episode(
                 }
             )
             write_json(run_path / "run.json", manifest)
+        if error is None:
+            token_total = sum(int(row["tokens_estimate"]) for row in decisions)
+            baseline_total = sum(int(row["baseline_tokens_estimate"]) for row in decisions)
+            trace.record_live_episode(
+                episode_span,
+                {
+                    "schema_version": 1,
+                    "env_id": env_id,
+                    "run_id": run_id,
+                    "run_path": str(run_path),
+                    "mode": mode,
+                    "policy": policy.name,
+                    "goal": effective_goal,
+                    "success": bool(success),
+                    "reward": float(reward),
+                    "terminated": bool(terminated),
+                    "truncated": bool(truncated),
+                    "steps": len(decisions),
+                    "decision_tokens": token_total,
+                    "baseline_tokens": baseline_total,
+                    "token_reduction_pct": reduction_pct(baseline_total, token_total),
+                    "error": error,
+                    "decisions": decisions,
+                },
+            )
+        episode_cm.__exit__(*sys.exc_info())
 
     token_total = sum(int(row["tokens_estimate"]) for row in decisions)
     baseline_total = sum(int(row["baseline_tokens_estimate"]) for row in decisions)
@@ -431,6 +487,8 @@ def run_live_suite(
     limit: int | None = None,
     suite_kind: str = "miniwob",
     gym_module: Any | None = None,
+    arize_tracer: ArizeEvalTracer | None = None,
+    policy_name: str | None = None,
 ) -> dict[str, Any]:
     modes = modes or ["compact", "full_state"]
     policy_factory = policy_factory or _default_policy_factory
@@ -440,37 +498,47 @@ def run_live_suite(
         suite_kind=suite_kind,
         gym_module=gym_module,
     )
+    trace = arize_tracer or noop_arize_tracer()
 
     runs: list[dict[str, Any]] = []
     failure_table: list[dict[str, Any]] = []
-    for episode_index, episode in enumerate(episodes, start=1):
-        by_mode: dict[str, dict[str, Any]] = {}
-        for mode in modes:
-            result = _run_with_retries(
-                episode,
-                mode=mode,
-                policy_factory=policy_factory,
-                max_steps=int(episode.get("max_steps") or max_steps),
-                headless=headless,
-                seed=int(episode.get("seed", seed if seed is not None else episode_index)),
-                retries=retries,
-                gym_module=gym_module,
-            )
-            by_mode[mode] = result
-            runs.append(result)
-        failure_table.append(_failure_row(episode, by_mode, modes))
+    suite_name = str(suite.get("suite") or f"browsergym-live-{suite_kind}")
+    with trace.live_suite_span(
+        suite=suite_name,
+        policy=policy_name or str(suite.get("policy") or "policy_factory"),
+        modes=list(modes),
+    ) as suite_span:
+        for episode_index, episode in enumerate(episodes, start=1):
+            by_mode: dict[str, dict[str, Any]] = {}
+            for mode in modes:
+                result = _run_with_retries(
+                    episode,
+                    mode=mode,
+                    policy_factory=policy_factory,
+                    max_steps=int(episode.get("max_steps") or max_steps),
+                    headless=headless,
+                    seed=int(episode.get("seed", seed if seed is not None else episode_index)),
+                    retries=retries,
+                    gym_module=gym_module,
+                    arize_tracer=trace,
+                )
+                by_mode[mode] = result
+                runs.append(result)
+            failure_table.append(_failure_row(episode, by_mode, modes))
 
-    return {
-        "schema_version": 1,
-        "suite": str(suite.get("suite") or f"browsergym-live-{suite_kind}"),
-        "source": "browsergym-live",
-        "suite_kind": suite_kind,
-        "modes": modes,
-        "runs": runs,
-        "failure_table": failure_table,
-        "summary": _suite_summary(runs, failure_table, modes),
-        "charts": _chart_payload(runs, failure_table, modes),
-    }
+        report = {
+            "schema_version": 1,
+            "suite": suite_name,
+            "source": "browsergym-live",
+            "suite_kind": suite_kind,
+            "modes": modes,
+            "runs": runs,
+            "failure_table": failure_table,
+            "summary": _suite_summary(runs, failure_table, modes),
+            "charts": _chart_payload(runs, failure_table, modes),
+        }
+        trace.record_live_suite(suite_span, report)
+        return report
 
 
 def probe_workarena(gym_module: Any | None = None) -> dict[str, Any]:
@@ -527,6 +595,66 @@ def resolve_action_for_page(action: BrowserAction, page_state: PageState) -> Bro
         return action
     resolved = _resolve_target_ref(action.target, page_state.interactive)
     return action.model_copy(update={"target": resolved})
+
+
+def _apply_compact_hint_guard(
+    action: BrowserAction,
+    page_state: PageState,
+    observation: CompactObservation,
+    action_history: list[BrowserAction],
+    mode: LiveMode,
+) -> BrowserAction:
+    if mode != "compact" or action.type != "click" or not action.target:
+        return action
+    if "not visible in active panel" not in observation.llm_observation:
+        return action
+    if "inactive_tabs=" not in observation.llm_observation:
+        return action
+
+    clicked = {_normalize(previous.target) for previous in action_history if previous.target}
+    target = next(
+        (
+            item
+            for item in page_state.interactive
+            if _normalize(item.ref) == _normalize(action.target)
+        ),
+        None,
+    )
+    if target is None:
+        return action
+
+    inactive_tabs = [
+        item
+        for item in page_state.interactive
+        if item.role == "tab" and not item.selected and not item.disabled
+    ]
+    if not inactive_tabs:
+        return action
+    replacement = next(
+        (item for item in inactive_tabs if _normalize(item.ref) not in clicked),
+        inactive_tabs[0],
+    )
+    if (
+        target.role == "tab"
+        and _normalize(target.ref) in clicked
+        and _normalize(replacement.ref) != _normalize(target.ref)
+    ):
+        metadata = {
+            **action.metadata,
+            "browserdelta_hint_override": "unvisited_tab_before_revisited_tab",
+            "original_target": action.target,
+        }
+        return action.model_copy(update={"target": replacement.ref, "metadata": metadata})
+
+    if target.role != "generic" or target.name or target.value:
+        return action
+
+    metadata = {
+        **action.metadata,
+        "browserdelta_hint_override": "inactive_tab_before_unlabeled_click",
+        "original_target": action.target,
+    }
+    return action.model_copy(update={"target": replacement.ref, "metadata": metadata})
 
 
 def write_live_markdown_report(path: Path, report: dict[str, Any]) -> None:
@@ -691,6 +819,7 @@ def _run_with_retries(
     seed: int,
     retries: int,
     gym_module: Any | None,
+    arize_tracer: ArizeEvalTracer | None,
 ) -> dict[str, Any]:
     last_error: str | None = None
     for attempt in range(retries + 1):
@@ -706,6 +835,7 @@ def _run_with_retries(
                 seed=seed,
                 goal=str(episode.get("goal") or ""),
                 gym_module=gym_module,
+                arize_tracer=arize_tracer,
             )
             result["attempt"] = attempt + 1
             return result
@@ -1111,6 +1241,9 @@ Return one JSON browser action for the current browser state.
 Rules:
 - Use target refs exactly as shown in interactive_elements whenever possible.
 - In compact mode, trust current_observation.llm_observation. It may include hints like remaining_refs, target_hint, or submit_ready_ref.
+- If compact mode says target_status=target "... not visible in active panel" and inactive_tabs are listed, click an inactive tab before any unlabeled generic panel item.
+- When choosing among inactive_tabs, prefer a tab ref that is not already present in action_history.
+- Do not click unlabeled generic elements unless target_hint says they are the likely_click_ref or the target text is visible in the active panel.
 - If submit_ready_ref is present and steps_remaining is 1 or less, click submit_ready_ref.
 - BrowserGym tasks usually have short action budgets. Avoid repeating clicks that caused no state change; if a completion button is ready, click it.
 - Choose one action type: goto, click, type, press, scroll, or wait.

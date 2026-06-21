@@ -230,6 +230,58 @@ def test_compact_step_adds_tab_panel_text_context(tmp_path: Path):
     assert "visible_panel_text=faucibus; eu" in observation.llm_observation
 
 
+def test_compact_step_warns_when_tab_target_is_absent_from_active_panel(tmp_path: Path):
+    step = _write_state_pair(
+        tmp_path,
+        before=PageState(
+            url="https://app.test/tabs",
+            title="Tabs",
+            text=["Click Tab Task", "Section #1", "sed"],
+            interactive=[
+                InteractiveElement(ref="16", role="tab", name="Section #1", selected=True),
+                InteractiveElement(ref="20", role="tab", name="Section #2", selected=False),
+                InteractiveElement(ref="25", role="tab", name="Section #3", selected=False),
+            ],
+            metadata={"goal": 'Expand the sections below and click the link "faucibus".'},
+        ),
+        after=PageState(
+            url="https://app.test/tabs",
+            title="Tabs",
+            text=[
+                "Click Tab Task",
+                "Section #2",
+                "Sodales vitae adipiscing",
+                "amet",
+                "vel",
+            ],
+            interactive=[
+                InteractiveElement(ref="16", role="tab", name="Section #1", selected=False),
+                InteractiveElement(ref="20", role="tab", name="Section #2", selected=True),
+                InteractiveElement(ref="25", role="tab", name="Section #3", selected=False),
+                InteractiveElement(ref="23", role="generic"),
+                InteractiveElement(ref="24", role="generic"),
+            ],
+            metadata={"goal": 'Expand the sections below and click the link "faucibus".'},
+        ),
+        action=BrowserAction(type="click", target="20"),
+    )
+
+    observation = compact_step(tmp_path, step)
+
+    assert 'target_status=target "faucibus" not visible in active panel' in (
+        observation.llm_observation
+    )
+    assert "inspect inactive tabs before unlabeled panel clickables" in (
+        observation.llm_observation
+    )
+    assert "unlabeled_clickables=23 generic (no visible label); 24 generic" in (
+        observation.llm_observation
+    )
+    assert "inactive_tabs=16 tab: Section #1; 25 tab: Section #3" in (
+        observation.llm_observation
+    )
+
+
 def _write_state_pair(
     tmp_path: Path,
     *,

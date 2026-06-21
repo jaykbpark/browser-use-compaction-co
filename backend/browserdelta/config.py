@@ -15,6 +15,11 @@ class Settings:
         self.openai_api_key = os.getenv("OPENAI_API_KEY", "").strip()
         self.openai_model = os.getenv("OPENAI_MODEL", "gpt-4.1-mini").strip()
         self.openai_base_url = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1").strip()
+        self.arize_api_key = os.getenv("ARIZE_API_KEY", "").strip()
+        self.arize_space_id = os.getenv("ARIZE_SPACE_ID", "").strip()
+        self.arize_project_name = os.getenv(
+            "ARIZE_PROJECT_NAME", "browserdelta-hackathon"
+        ).strip()
         self.runs_dir = Path(os.getenv("RUNS_DIR", "runs"))
 
 

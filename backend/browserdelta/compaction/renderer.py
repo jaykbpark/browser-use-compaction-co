@@ -221,15 +221,33 @@ def _render_tab_context(after: PageState) -> str:
         for item in after.interactive
         if item.role in {"link", "generic", "button"} and item.role != "tab"
     ]
-    link_text = "; ".join(_render_interactive_for_llm(item) for item in links[:12])
+    labeled_links = [item for item in links if item.name or item.value]
+    unlabeled_links = [item for item in links if not (item.name or item.value)]
+    link_text = "; ".join(_render_interactive_for_llm(item) for item in labeled_links[:8])
+    unlabeled_text = "; ".join(
+        f"{item.ref} {item.role} (no visible label)" for item in unlabeled_links[:8]
+    )
+    inactive_tabs = [item for item in tabs if not item.selected]
+    inactive_tab_text = "; ".join(
+        _render_interactive_for_llm(item) for item in inactive_tabs[:8]
+    )
     target_hint = _render_panel_target_hint(goal, panel_text, links)
+    target_status = _render_panel_target_status(goal, panel_text, links, inactive_tabs)
     target_hint_text = f"target_hint={target_hint}; " if target_hint else ""
+    target_status_text = f"target_status={target_status}; " if target_status else ""
+    inactive_tabs_text = f"; inactive_tabs={inactive_tab_text}" if inactive_tab_text else ""
+    unlabeled_clickables_text = (
+        f"; unlabeled_clickables={unlabeled_text}" if unlabeled_text else ""
+    )
     return (
         "Tab state: "
         f"active={_render_interactive_for_llm(active) if active else 'unknown'}; "
         f"{target_hint_text}"
+        f"{target_status_text}"
         f"visible_panel_text={'; '.join(panel_text[-12:]) or 'none'}; "
         f"panel_clickables={link_text or 'none'}"
+        f"{unlabeled_clickables_text}"
+        f"{inactive_tabs_text}"
     )
 
 
@@ -287,9 +305,6 @@ def _render_panel_target_hint(
         ],
         key=_spatial_rank,
     )
-    if not blank_clickables:
-        return ""
-
     short_text = [
         line
         for line in panel_text
@@ -302,13 +317,56 @@ def _render_panel_target_hint(
         target_normalized = _normalize(target)
         if not target_normalized:
             continue
-        if target_normalized in short_normalized:
+        labeled_match = next(
+            (
+                item
+                for item in links
+                if target_normalized in _normalize(f"{item.name or ''} {item.value or ''}")
+            ),
+            None,
+        )
+        if labeled_match:
+            hints.append(f'"{target}" visible; likely_click_ref={labeled_match.ref}')
+        elif blank_clickables and target_normalized in short_normalized:
             index = short_normalized.index(target_normalized)
             match = blank_clickables[min(index, len(blank_clickables) - 1)]
             hints.append(f'"{target}" visible; likely_click_ref={match.ref}')
-        elif target_normalized in panel_blob:
+        elif blank_clickables and target_normalized in panel_blob:
             hints.append(f'"{target}" visible; likely_click_ref={blank_clickables[0].ref}')
     return ", ".join(hints)
+
+
+def _render_panel_target_status(
+    goal: str,
+    panel_text: list[str],
+    links: list[InteractiveElement],
+    inactive_tabs: list[InteractiveElement],
+) -> str:
+    targets = _quoted_text(goal)
+    if not targets:
+        return ""
+
+    panel_blob = _normalize(" ".join(panel_text))
+    link_blob = _normalize(
+        " ".join(
+            " ".join(part for part in (item.name, item.value) if part)
+            for item in links
+        )
+    )
+    statuses: list[str] = []
+    for target in targets[:3]:
+        target_normalized = _normalize(target)
+        if not target_normalized:
+            continue
+        if target_normalized in panel_blob or target_normalized in link_blob:
+            continue
+        suffix = (
+            "; inspect inactive tabs before unlabeled panel clickables"
+            if inactive_tabs
+            else ""
+        )
+        statuses.append(f'target "{target}" not visible in active panel{suffix}')
+    return ", ".join(statuses)
 
 
 def _spatial_rank(item: InteractiveElement) -> tuple[float, float, str]:

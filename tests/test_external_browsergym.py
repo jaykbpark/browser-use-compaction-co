@@ -13,9 +13,14 @@ from browserdelta.config import get_settings
 from browserdelta.eval.runner import evaluate_run
 from browserdelta.external import browsergym_adapter as bg
 from browserdelta.external import browsergym_live as bgl
+from browserdelta.observability.arize import ArizeEvalTracer
 from browserdelta.schemas import (
+    BrowserAction,
+    CompactObservation,
     EvalComparisonReport,
     EvalComparisonSummary,
+    InteractiveElement,
+    PageState,
     ReplayReport,
 )
 
@@ -253,6 +258,107 @@ def test_run_live_suite_builds_failure_table_and_chart_payload(tmp_path: Path, m
     get_settings.cache_clear()
 
 
+def test_run_live_suite_emits_arize_trace_spans(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("RUNS_DIR", str(tmp_path / "runs"))
+    get_settings.cache_clear()
+    env = _FakeEnv([_obs(index) for index in range(2)])
+    fake_tracer = FakeOtelTracer()
+
+    report = bgl.run_live_suite(
+        {
+            "suite": "fake-live-arize",
+            "episodes": [
+                {
+                    "env_id": "browsergym/miniwob.click-button",
+                    "run_id": "fake_live_arize",
+                    "actions": ["click('a0')"],
+                }
+            ],
+        },
+        modes=["compact"],
+        gym_module=_FakeGym(env),
+        max_steps=2,
+        arize_tracer=ArizeEvalTracer(enabled=True, tracer=fake_tracer),
+        policy_name="scripted",
+    )
+
+    assert report["summary"]["episodes"] == 1
+    span_names = [span.name for span in fake_tracer.spans]
+    assert span_names == [
+        "browserdelta.browsergym_live.suite",
+        "browserdelta.browsergym_live.episode",
+        "browserdelta.browsergym_live.step",
+    ]
+    step_span = fake_tracer.spans[2]
+    assert step_span.attributes["openinference.span.kind"] == "AGENT"
+    assert step_span.attributes["browserdelta.raw_action.type"] == "click"
+    assert step_span.attributes["browserdelta.resolved_action.target"] == "a0"
+    episode_span = fake_tracer.spans[1]
+    assert episode_span.attributes["browserdelta.success"] is True
+    assert episode_span.attributes["browserdelta.compact_tokens"] > 0
+    suite_span = fake_tracer.spans[0]
+    assert suite_span.attributes["browserdelta.failure_classes"] == '{"missing_mode": 1}'
+
+    get_settings.cache_clear()
+
+
+def test_compact_hint_guard_avoids_unlabeled_click_when_target_is_absent():
+    state = PageState(
+        url="about:miniwob/tabs",
+        interactive=[
+            InteractiveElement(ref="16", role="tab", name="Section #1", selected=False),
+            InteractiveElement(ref="20", role="tab", name="Section #2", selected=True),
+            InteractiveElement(ref="25", role="tab", name="Section #3", selected=False),
+            InteractiveElement(ref="23", role="generic"),
+        ],
+    )
+    observation = CompactObservation(
+        step=2,
+        action_result="success",
+        summary="Focus changed to tab Section #2",
+        llm_observation=(
+            'target_status=target "faucibus" not visible in active panel; '
+            "inspect inactive tabs before unlabeled panel clickables; "
+            "inactive_tabs=16 tab: Section #1; 25 tab: Section #3"
+        ),
+        route="text_only",
+        fallback="none",
+    )
+
+    guarded = bgl._apply_compact_hint_guard(
+        BrowserAction(type="click", target="23"),
+        state,
+        observation,
+        [
+            BrowserAction(type="click", target="16"),
+            BrowserAction(type="click", target="20"),
+        ],
+        "compact",
+    )
+
+    assert guarded.target == "25"
+    assert guarded.metadata["browserdelta_hint_override"] == (
+        "inactive_tab_before_unlabeled_click"
+    )
+    assert guarded.metadata["original_target"] == "23"
+
+    revisited = bgl._apply_compact_hint_guard(
+        BrowserAction(type="click", target="16"),
+        state,
+        observation,
+        [
+            BrowserAction(type="click", target="16"),
+            BrowserAction(type="click", target="20"),
+        ],
+        "compact",
+    )
+
+    assert revisited.target == "25"
+    assert revisited.metadata["browserdelta_hint_override"] == (
+        "unvisited_tab_before_revisited_tab"
+    )
+
+
 def test_probe_workarena_gracefully_reports_missing_registry():
     class EmptyGym:
         class envs:
@@ -369,3 +475,36 @@ def _load_script(name: str):
     sys.modules[name] = module
     spec.loader.exec_module(module)
     return module
+
+
+class FakeSpan:
+    def __init__(self, name: str) -> None:
+        self.name = name
+        self.attributes: dict[str, object] = {}
+        self.status: object | None = None
+        self.exceptions: list[Exception] = []
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args):
+        return False
+
+    def set_attribute(self, key: str, value: object) -> None:
+        self.attributes[key] = value
+
+    def set_status(self, status: object) -> None:
+        self.status = status
+
+    def record_exception(self, exc: Exception) -> None:
+        self.exceptions.append(exc)
+
+
+class FakeOtelTracer:
+    def __init__(self) -> None:
+        self.spans: list[FakeSpan] = []
+
+    def start_as_current_span(self, name: str) -> FakeSpan:
+        span = FakeSpan(name)
+        self.spans.append(span)
+        return span

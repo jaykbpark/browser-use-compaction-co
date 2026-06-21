@@ -190,6 +190,9 @@ run folder. Resolve them as `runs/<run_id>/<path>` when reading files.
   is optional; use `BROWSERBASE_CONNECT_URL` only when a raw CDP URL is provided.
 - Use `OPENAI_API_KEY` and optional `OPENAI_MODEL` for model-backed replay eval.
   Keep `heuristic` eval as the default free smoke test.
+- If Arize credentials are present, prefer adding `--arize` to demo eval
+  commands so replay and live BrowserGym runs emit traces. Install the optional
+  tracing dependencies with `pip install -e ".[observability]"`.
 - Keep generated runs under `runs/`; do not commit run artifacts except small
   hand-written examples under `examples/`.
 - Prefer deterministic DOM/accessibility diffs first, image diffs second, OCR or
@@ -211,12 +214,13 @@ python scripts/record_demo.py --task tasks/local_checkout.json --run-id local_ch
 python scripts/eval_run.py runs/local_checkout
 python scripts/eval_run.py runs/local_checkout --predictor llm
 python scripts/eval_run.py runs/local_checkout --predictor llm --compare
+python scripts/eval_run.py runs/local_checkout --predictor llm --compare --arize
 python scripts/eval_run.py runs/local_checkout --predictor llm --context-mode vision_full_state
 python scripts/eval_suite.py --predictor llm --compare runs/local_checkout runs/browserbase_checkout runs/visual_canvas_chart runs/visual_progress_toast runs/visual_swatch_picker
-PYTHONPATH=$PWD/backend .venv-browsergym/bin/python scripts/run_browsergym_live.py --env browsergym/miniwob.click-button --modes compact,full_state --policy llm --headless --max-steps 10
+PYTHONPATH=$PWD/backend .venv-browsergym/bin/python scripts/run_browsergym_live.py --env browsergym/miniwob.click-button --modes compact,full_state --policy llm --headless --max-steps 10 --arize
 PYTHONPATH=$PWD/backend .venv-browsergym/bin/python scripts/run_browsergym_live.py docs/browsergym-live-suite.example.json --modes compact,full_state --policy llm --headless --limit 50 --retries 1
 python3 scripts/build_failure_suite.py reports/external/browsergym-live-miniwob_llm_combined50_20260621T054656Z.json --out artifacts/failure-loop/combined50-hard-cases.json
-PYTHONPATH=$PWD/backend .venv-browsergym/bin/python scripts/run_browsergym_live.py artifacts/failure-loop/combined50-hard-cases.json --modes compact,full_state --policy llm --headless --retries 1
+PYTHONPATH=$PWD/backend .venv-browsergym/bin/python scripts/run_browsergym_live.py artifacts/failure-loop/combined50-hard-cases.json --modes compact,full_state --policy llm --headless --retries 1 --arize
 PYTHONPATH=$PWD/backend .venv-browsergym/bin/python scripts/run_browsergym_live.py --probe-workarena
 python scripts/compact_run.py runs/smoke
 python scripts/compact_run.py examples/runs/login_error

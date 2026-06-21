@@ -23,6 +23,7 @@ from browserdelta.external.browsergym_live import (  # noqa: E402
     run_live_suite,
     write_live_markdown_report,
 )
+from browserdelta.observability.arize import start_arize_tracing  # noqa: E402
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -50,6 +51,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--headless", action="store_true")
     parser.add_argument("--out-dir", type=Path, default=ROOT / "reports" / "external")
     parser.add_argument("--probe-workarena", action="store_true")
+    parser.add_argument("--arize", action="store_true", help="Emit Arize AX traces.")
+    parser.add_argument("--arize-project", help="Override ARIZE_PROJECT_NAME for this run.")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
 
@@ -64,18 +67,26 @@ def main(argv: list[str] | None = None) -> int:
 
     settings = get_settings()
     modes = _parse_modes(args.modes)
+    tracer = start_arize_tracing(args.arize, project_name=args.arize_project)
+    if args.arize and not tracer.enabled:
+        print(f"Arize tracing disabled: {tracer.reason}", file=sys.stderr)
     try:
-        report = run_live_suite(
-            suite,
-            modes=modes,
-            policy_factory=_policy_factory(args.policy, settings),
-            max_steps=args.max_steps,
-            headless=args.headless,
-            seed=args.seed,
-            retries=args.retries,
-            limit=args.limit,
-            suite_kind=args.suite_kind,
-        )
+        try:
+            report = run_live_suite(
+                suite,
+                modes=modes,
+                policy_factory=_policy_factory(args.policy, settings),
+                max_steps=args.max_steps,
+                headless=args.headless,
+                seed=args.seed,
+                retries=args.retries,
+                limit=args.limit,
+                suite_kind=args.suite_kind,
+                arize_tracer=tracer,
+                policy_name=args.policy,
+            )
+        finally:
+            tracer.flush()
     except BrowserGymUnavailable as exc:
         print(str(exc), file=sys.stderr)
         return 1
