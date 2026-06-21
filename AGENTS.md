@@ -154,6 +154,10 @@ run folder. Resolve them as `runs/<run_id>/<path>` when reading files.
   BrowserGym environment for `scripts/record_browsergym.py`. Do not add
   BrowserGym to the default project dependencies unless the Playwright conflict
   is resolved.
+- Use `scripts/run_browsergym_live.py` for the live external eval path where an
+  agent acts from BrowserDelta compact observations versus full-state
+  observations on the same BrowserGym tasks. Keep MiniWoB/WorkArena live evals
+  in the isolated BrowserGym environment and keep WorkArena optional.
 - The login and modal fixtures should produce `route=text_only`,
   `fallback=none`, and a positive `reduction_pct`.
 - The visual-only fixture should produce `route=crop_with_context`,
@@ -205,6 +209,9 @@ python scripts/eval_run.py runs/local_checkout --predictor llm
 python scripts/eval_run.py runs/local_checkout --predictor llm --compare
 python scripts/eval_run.py runs/local_checkout --predictor llm --context-mode vision_full_state
 python scripts/eval_suite.py --predictor llm --compare runs/local_checkout runs/browserbase_checkout runs/visual_canvas_chart runs/visual_progress_toast runs/visual_swatch_picker
+PYTHONPATH=$PWD/backend .venv-browsergym/bin/python scripts/run_browsergym_live.py --env browsergym/miniwob.click-button --modes compact,full_state --policy llm --headless --max-steps 10
+PYTHONPATH=$PWD/backend .venv-browsergym/bin/python scripts/run_browsergym_live.py docs/browsergym-live-suite.example.json --modes compact,full_state --policy llm --headless --limit 50 --retries 1
+PYTHONPATH=$PWD/backend .venv-browsergym/bin/python scripts/run_browsergym_live.py --probe-workarena
 python scripts/compact_run.py runs/smoke
 python scripts/compact_run.py examples/runs/login_error
 python scripts/compact_run.py examples/runs/modal_checkout

@@ -12,6 +12,7 @@ import pytest
 from browserdelta.config import get_settings
 from browserdelta.eval.runner import evaluate_run
 from browserdelta.external import browsergym_adapter as bg
+from browserdelta.external import browsergym_live as bgl
 from browserdelta.schemas import (
     EvalComparisonReport,
     EvalComparisonSummary,
@@ -118,6 +119,15 @@ def test_parse_browsergym_action_handles_quoted_commas():
     assert bg.parse_browsergym_action("noop()").type == "wait"
 
 
+def test_format_browsergym_action_outputs_browsergym_calls():
+    assert bg.format_browsergym_action(bg.parse_browsergym_action("click('a1')")) == "click('a1')"
+    assert (
+        bg.format_browsergym_action(bg.parse_browsergym_action("fill('a2', 'hello, world')"))
+        == "fill('a2', 'hello, world')"
+    )
+    assert bg.format_browsergym_action(bg.parse_browsergym_action("noop()")) == "noop()"
+
+
 def test_record_episode_with_fake_env_writes_browserdelta_run(tmp_path: Path, monkeypatch):
     monkeypatch.setenv("RUNS_DIR", str(tmp_path / "runs"))
     get_settings.cache_clear()
@@ -145,6 +155,74 @@ def test_record_episode_with_fake_env_writes_browserdelta_run(tmp_path: Path, mo
     assert report.compact_tokens > 0
 
     get_settings.cache_clear()
+
+
+def test_run_live_episode_records_compact_agent_trace(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("RUNS_DIR", str(tmp_path / "runs"))
+    get_settings.cache_clear()
+    env = _FakeEnv([_obs(index) for index in range(3)])
+
+    result = bgl.run_live_episode(
+        "browsergym/miniwob.click-button",
+        "live_fake_compact",
+        mode="compact",
+        policy=bgl.ScriptedBrowserGymPolicy(["click('a0')", "click('a1')"]),
+        gym_module=_FakeGym(env),
+        max_steps=3,
+    )
+
+    run_path = Path(result["run_path"])
+    assert result["success"] is True
+    assert result["mode"] == "compact"
+    assert result["decision_tokens"] > 0
+    assert result["baseline_tokens"] >= result["decision_tokens"]
+    assert (run_path / "steps.jsonl").is_file()
+    assert (run_path / "compact_observations.jsonl").is_file()
+    assert result["decisions"][0]["browsergym_action"] == "click('a0')"
+
+    get_settings.cache_clear()
+
+
+def test_run_live_suite_builds_failure_table_and_chart_payload(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("RUNS_DIR", str(tmp_path / "runs"))
+    get_settings.cache_clear()
+    env = _FakeEnv([_obs(index) for index in range(3)])
+
+    report = bgl.run_live_suite(
+        {
+            "suite": "fake-live",
+            "episodes": [
+                {
+                    "env_id": "browsergym/miniwob.click-button",
+                    "run_id": "fake_live",
+                    "actions": ["click('a0')", "click('a1')"],
+                }
+            ],
+        },
+        modes=["compact", "full_state"],
+        gym_module=_FakeGym(env),
+        max_steps=3,
+    )
+
+    assert report["summary"]["episodes"] == 1
+    assert report["failure_table"][0]["failure_class"] == "both_success"
+    assert report["failure_table"][0]["compact_success"] is True
+    assert report["charts"]["success_by_mode"][0]["episodes"] == 1
+    assert {row["mode"] for row in report["summary"]["by_mode"]} == {"compact", "full_state"}
+
+    get_settings.cache_clear()
+
+
+def test_probe_workarena_gracefully_reports_missing_registry():
+    class EmptyGym:
+        class envs:
+            registry: dict[str, object] = {}
+
+    probe = bgl.probe_workarena(gym_module=EmptyGym())
+
+    assert probe["available"] is False
+    assert probe["env_count"] == 0
+    assert "WorkArena" in probe["message"]
 
 
 def test_require_browsergym_has_helpful_isolated_env_error(monkeypatch):

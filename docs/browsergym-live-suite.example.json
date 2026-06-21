@@ -1,0 +1,20 @@
+{
+  "suite": "browsergym-live-miniwob-smoke",
+  "episodes": [
+    {
+      "env_id": "browsergym/miniwob.click-button",
+      "run_id": "live_miniwob_click_button",
+      "goal": "Click the requested button."
+    },
+    {
+      "env_id": "browsergym/miniwob.enter-text",
+      "run_id": "live_miniwob_enter_text",
+      "goal": "Enter the requested text."
+    },
+    {
+      "env_id": "browsergym/miniwob.click-checkboxes",
+      "run_id": "live_miniwob_click_checkboxes",
+      "goal": "Click the requested checkboxes."
+    }
+  ]
+}

@@ -74,3 +74,46 @@ task fixed:
 
 The metrics to show are task success or next-action parity, compact-vs-baseline
 accuracy, estimated token savings, and failure examples.
+
+## Live Agent Eval: Three Phases
+
+The live path holds the task and agent fixed, then swaps only the observation
+that the agent sees:
+
+- `compact`: BrowserDelta compact observation after each action.
+- `full_state`: uncompressed current page state and screenshot pointer.
+- `vision_full_state`: uncompressed current page state plus attached screenshot
+  image for model-backed policies.
+
+Phase 1 is a small MiniWoB live smoke:
+
+```bash
+PYTHONPATH=$PWD/backend .venv-browsergym/bin/python scripts/run_browsergym_live.py \
+  --env browsergym/miniwob.click-button \
+  --modes compact,full_state \
+  --policy llm \
+  --headless \
+  --max-steps 10
+```
+
+Phase 2 is the scaled MiniWoB run. Pass a suite JSON or let the script discover
+registered MiniWoB envs and cap with `--limit 50`. The output JSON includes
+raw runs, a failure table, and a chart-ready `charts` object:
+
+```bash
+PYTHONPATH=$PWD/backend .venv-browsergym/bin/python scripts/run_browsergym_live.py \
+  docs/browsergym-live-suite.example.json \
+  --modes compact,full_state \
+  --policy llm \
+  --headless \
+  --limit 50 \
+  --retries 1
+```
+
+Phase 3 is optional WorkArena. Probe first; if WorkArena is not installed, the
+script returns a clean availability report instead of breaking normal CI:
+
+```bash
+PYTHONPATH=$PWD/backend .venv-browsergym/bin/python scripts/run_browsergym_live.py \
+  --probe-workarena
+```

@@ -67,11 +67,13 @@ class BrowserGymUnavailable(ImportError):
     """Raised when BrowserGym-backed recording is requested but unavailable."""
 
 
-def require_browsergym() -> Any:
+def require_browsergym(extra_modules: list[str] | None = None) -> Any:
     try:
         import gymnasium as gym  # noqa: F401
         import browsergym.core  # noqa: F401
         import browsergym.miniwob  # noqa: F401
+        for module in extra_modules or []:
+            __import__(module)
     except ImportError as exc:
         raise BrowserGymUnavailable(INSTALL_HINT) from exc
 
@@ -164,6 +166,22 @@ def parse_browsergym_action(action: str | None) -> BrowserAction:
     )
 
 
+def format_browsergym_action(action: BrowserAction) -> str:
+    if action.type == "wait":
+        return "noop()"
+    if action.type == "goto":
+        return f"goto({_quote(action.url or action.target or '')})"
+    if action.type == "type":
+        return f"fill({_quote(action.target or '')}, {_quote(action.text or '')})"
+    if action.type == "press":
+        if action.target:
+            return f"press({_quote(action.target)}, {_quote(action.key or 'Enter')})"
+        return f"keyboard_press({_quote(action.key or 'Enter')})"
+    if action.type == "scroll":
+        return f"scroll(0, {int(action.amount or 0)})"
+    return f"click({_quote(action.target or '')})"
+
+
 def noop_policy(_obs: dict[str, Any]) -> str:
     return "noop()"
 
@@ -218,10 +236,10 @@ def record_episode(
             else:
                 action_text = choose_action(obs)
 
-            before = _write_state(run_path, step_number, "before", obs)
+            before = write_browsergym_state(run_path, step_number, "before", obs)
             step_out = env.step(action_text)
             obs, reward, terminated, truncated, info = _unpack_step(step_out)
-            after = _write_state(run_path, step_number, "after", obs)
+            after = write_browsergym_state(run_path, step_number, "after", obs)
             success = success or bool(info.get("success") or reward > 0)
 
             append_jsonl(
@@ -255,13 +273,22 @@ def record_episode(
     return run_path
 
 
-def _write_state(run_path: Path, step: int, when: str, obs: dict[str, Any]) -> StatePointer:
+def write_browsergym_state(
+    run_path: Path,
+    step: int,
+    when: str,
+    obs: dict[str, Any],
+) -> StatePointer:
     screenshot_rel = f"steps/step_{step:03d}_{when}.png"
     state_rel = f"steps/step_{step:03d}_{when}.json"
     has_screenshot = _save_screenshot(obs.get("screenshot"), run_path / screenshot_rel)
     state = observation_to_page_state(obs, screenshot=screenshot_rel if has_screenshot else None)
     write_json(run_path / state_rel, state)
     return StatePointer(screenshot=screenshot_rel if has_screenshot else "", state=state_rel)
+
+
+def _quote(value: str) -> str:
+    return repr(str(value))
 
 
 def _save_screenshot(value: Any, path: Path) -> bool:
