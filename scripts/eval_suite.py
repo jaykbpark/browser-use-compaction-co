@@ -42,7 +42,23 @@ def main(argv: list[str] | None = None) -> int:
         help="Baseline context mode to use with --compare.",
     )
     parser.add_argument("--json", action="store_true", help="Print the suite summary as JSON.")
+    parser.add_argument(
+        "--arize",
+        action="store_true",
+        help="Send eval traces to Arize via OTLP. Requires ARIZE_API_KEY and ARIZE_SPACE_ID.",
+    )
+    parser.add_argument(
+        "--arize-project",
+        default="browserdelta-hackathon",
+        help="Arize project name (default: browserdelta-hackathon).",
+    )
     args = parser.parse_args(argv)
+
+    tracer_provider = None
+    if args.arize:
+        from browserdelta.observability import configure_arize_tracing
+
+        tracer_provider = configure_arize_tracing(args.arize_project)
 
     suite = evaluate_suite(
         args.inputs,
@@ -50,6 +66,15 @@ def main(argv: list[str] | None = None) -> int:
         compare=args.compare,
         baseline_context_mode=args.baseline_context,  # type: ignore[arg-type]
     )
+
+    if args.arize and tracer_provider is not None:
+        from opentelemetry import trace
+
+        from browserdelta.observability import trace_eval_suite
+
+        tracer = trace.get_tracer("browserdelta.eval")
+        trace_eval_suite(tracer, suite)
+        tracer_provider.force_flush(timeout_millis=15000)
 
     if args.json:
         print(json.dumps(suite, indent=2))
