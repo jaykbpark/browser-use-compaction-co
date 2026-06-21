@@ -168,6 +168,9 @@ type RunDetail = {
 type BusyAction = "compact" | "evaluate" | "compare" | null;
 
 const numberFormatter = new Intl.NumberFormat("en-US");
+const RUN_LABELS: Record<string, string> = {
+  viewer_search_filter_smoke: "Fruit Finder replay",
+};
 
 function App() {
   const [runs, setRuns] = React.useState<string[]>([]);
@@ -304,60 +307,66 @@ function App() {
         </div>
       </header>
 
-      <section className="controls" aria-label="Run controls">
+      <section className="controls" aria-label="Replay setup">
+        <div className="controls-title">
+          <p className="eyebrow">Replay setup</p>
+          <strong>Choose a saved task, then compare full browser state against BrowserDelta.</strong>
+        </div>
         <label>
-          <span>Run</span>
+          <span>Recorded task</span>
           <select value={selectedRun} onChange={(event) => setSelectedRun(event.target.value)}>
             {runs.map((run) => (
               <option key={run} value={run}>
-                {run}
+                {formatRunLabel(run)}
               </option>
             ))}
           </select>
         </label>
         <label>
-          <span>Predictor</span>
+          <span>Scoring method</span>
           <select
             value={predictor}
             onChange={(event) => setPredictor(event.target.value as "heuristic" | "llm")}
           >
-            <option value="heuristic">heuristic</option>
-            <option value="llm">llm</option>
+            <option value="heuristic">Rule-based check</option>
+            <option value="llm">LLM check</option>
           </select>
         </label>
-        <button
-          type="button"
-          onClick={() =>
-            void runAction("compact", () =>
-              fetch(`/api/runs/${encodeURIComponent(selectedRun)}/compact`, { method: "POST" }),
-            )
-          }
-          disabled={!selectedRun || busy !== null}
-        >
-          {busy === "compact" ? <Loader2 className="spin" size={16} /> : <Zap size={16} />}
-          Compact
-        </button>
-        <button
-          type="button"
-          onClick={() =>
-            void runAction("compare", () =>
-              fetch(
-                `/api/runs/${encodeURIComponent(
-                  selectedRun,
-                )}/eval/compare?predictor=${encodeURIComponent(predictor)}`,
-                { method: "POST" },
-              ),
-            )
-          }
-          disabled={!selectedRun || busy !== null}
-        >
-          {busy === "compare" ? <Loader2 className="spin" size={16} /> : <Gauge size={16} />}
-          Compare
-        </button>
-        <button type="button" className="secondary" onClick={refreshRunList} disabled={busy !== null}>
-          <RefreshCw size={16} />
-          Refresh
-        </button>
+        <div className="control-actions">
+          <button
+            type="button"
+            onClick={() =>
+              void runAction("compact", () =>
+                fetch(`/api/runs/${encodeURIComponent(selectedRun)}/compact`, { method: "POST" }),
+              )
+            }
+            disabled={!selectedRun || busy !== null}
+          >
+            {busy === "compact" ? <Loader2 className="spin" size={16} /> : <Zap size={16} />}
+            Build BrowserDelta view
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              void runAction("compare", () =>
+                fetch(
+                  `/api/runs/${encodeURIComponent(
+                    selectedRun,
+                  )}/eval/compare?predictor=${encodeURIComponent(predictor)}`,
+                  { method: "POST" },
+                ),
+              )
+            }
+            disabled={!selectedRun || busy !== null}
+          >
+            {busy === "compare" ? <Loader2 className="spin" size={16} /> : <Gauge size={16} />}
+            Compare full vs BrowserDelta
+          </button>
+          <button type="button" className="secondary" onClick={refreshRunList} disabled={busy !== null}>
+            <RefreshCw size={16} />
+            Reload
+          </button>
+        </div>
       </section>
 
       <StatusLine status={status} error={error} detail={detail} />
@@ -456,7 +465,7 @@ function StatusLine({
   return (
     <div className={error ? "status-line error" : "status-line"}>
       {error ? <AlertCircle size={16} /> : <CheckCircle2 size={16} />}
-      <span>{error ? error : `${status}${detail ? ` · ${detail.run_id}` : ""}`}</span>
+      <span>{error ? error : `${status}${detail ? ` · ${formatRunLabel(detail.run_id)}` : ""}`}</span>
     </div>
   );
 }
@@ -720,7 +729,7 @@ function BenchmarkSummary({ runs }: { runs: RunDetail[] }) {
       <div className="run-table">
         {rows.slice(0, 4).map((report) => (
           <div key={report.run_id}>
-            <strong>{report.run_id}</strong>
+            <strong>{formatRunLabel(report.run_id)}</strong>
             <span>
               compact {report.summary.compact_passed_steps}/{report.summary.evaluated_steps} · full{" "}
               {report.summary.baseline_passed_steps}/{report.summary.evaluated_steps} ·{" "}
@@ -823,6 +832,18 @@ function tokenReductionPct(baseline: number, compact: number) {
 
 function formatPct(value: number) {
   return `${Number.isFinite(value) ? value.toFixed(1) : "0.0"}%`;
+}
+
+function formatRunLabel(runId: string) {
+  return (
+    RUN_LABELS[runId] ??
+    runId
+      .replace(/^viewer_/, "")
+      .split("_")
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ")
+  );
 }
 
 function errorMessage(err: unknown) {

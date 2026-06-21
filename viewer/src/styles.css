@@ -95,10 +95,36 @@ h3 {
 
 .controls {
   display: grid;
-  grid-template-columns: minmax(240px, 1fr) 170px repeat(3, max-content);
+  grid-template-columns: minmax(260px, 1fr) minmax(190px, 240px) auto;
   gap: 10px;
   align-items: end;
-  padding: 12px 0 8px;
+  margin: 12px 0 10px;
+  border: 1px solid #d8d2c3;
+  border-radius: 8px;
+  background: rgba(255, 253, 248, 0.84);
+  padding: 12px;
+}
+
+.controls-title {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  border-bottom: 1px solid #e2ddcf;
+  padding-bottom: 10px;
+}
+
+.controls-title .eyebrow {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.controls-title strong {
+  color: #2f3d37;
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.35;
 }
 
 .controls label {
@@ -120,7 +146,15 @@ select {
   border-radius: 6px;
   background: #fffdf8;
   color: #182026;
+  font-weight: 750;
   padding: 0 10px;
+}
+
+.control-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .controls button {
@@ -128,13 +162,14 @@ select {
   align-items: center;
   justify-content: center;
   gap: 7px;
-  height: 38px;
+  height: 40px;
   border: 1px solid #182026;
   border-radius: 6px;
   background: #182026;
   color: #fffaf0;
   font-weight: 850;
-  padding: 0 13px;
+  padding: 0 14px;
+  white-space: nowrap;
 }
 
 .controls button.secondary {
@@ -633,10 +668,15 @@ details a {
 
 @media (max-width: 1060px) {
   .hero,
+  .controls,
   .story-grid,
   .detail-row,
   .payload-grid {
     grid-template-columns: 1fr;
+  }
+
+  .control-actions {
+    justify-content: flex-start;
   }
 
   .browser-panel {
@@ -664,10 +704,19 @@ details a {
     gap: 10px;
   }
 
-  .controls,
   .step-strip,
   .compact-list,
   .detail-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .controls-title {
+    display: grid;
+    gap: 5px;
+  }
+
+  .control-actions {
+    display: grid;
     grid-template-columns: 1fr;
   }
 
