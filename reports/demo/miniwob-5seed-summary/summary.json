@@ -139,7 +139,7 @@
   "per_seed": [
     {
       "seed": "1",
-      "report_path": "/home/ubuntu/repos/browser-use-compaction-co/reports/external/miniwob-5seed/seed-1/browsergym-live-miniwob_llm_20260621T093712Z.json",
+      "report_path": "reports/external/miniwob-5seed/seed-1/browsergym-live-miniwob_llm_20260621T093712Z.json",
       "episodes": 125,
       "compact_success_rate": 0.432,
       "full_state_success_rate": 0.432,
@@ -155,7 +155,7 @@
     },
     {
       "seed": "2",
-      "report_path": "/home/ubuntu/repos/browser-use-compaction-co/reports/external/miniwob-5seed/seed-2/browsergym-live-miniwob_llm_20260621T093758Z.json",
+      "report_path": "reports/external/miniwob-5seed/seed-2/browsergym-live-miniwob_llm_20260621T093758Z.json",
       "episodes": 125,
       "compact_success_rate": 0.408,
       "full_state_success_rate": 0.424,
@@ -171,7 +171,7 @@
     },
     {
       "seed": "3",
-      "report_path": "/home/ubuntu/repos/browser-use-compaction-co/reports/external/miniwob-5seed/seed-3/browsergym-live-miniwob_llm_20260621T093455Z.json",
+      "report_path": "reports/external/miniwob-5seed/seed-3/browsergym-live-miniwob_llm_20260621T093455Z.json",
       "episodes": 125,
       "compact_success_rate": 0.408,
       "full_state_success_rate": 0.448,
@@ -187,7 +187,7 @@
     },
     {
       "seed": "4",
-      "report_path": "/home/ubuntu/repos/browser-use-compaction-co/reports/external/miniwob-5seed/seed-4/browsergym-live-miniwob_llm_20260621T093708Z.json",
+      "report_path": "reports/external/miniwob-5seed/seed-4/browsergym-live-miniwob_llm_20260621T093708Z.json",
       "episodes": 125,
       "compact_success_rate": 0.416,
       "full_state_success_rate": 0.464,
@@ -203,7 +203,7 @@
     },
     {
       "seed": "5",
-      "report_path": "/home/ubuntu/repos/browser-use-compaction-co/reports/external/miniwob-5seed/seed-5/browsergym-live-miniwob_llm_20260621T093647Z.json",
+      "report_path": "reports/external/miniwob-5seed/seed-5/browsergym-live-miniwob_llm_20260621T093647Z.json",
       "episodes": 125,
       "compact_success_rate": 0.384,
       "full_state_success_rate": 0.408,

@@ -57,7 +57,14 @@ def _mean_std(values: list[float]) -> dict[str, float]:
     }
 
 
-def load_seeds(in_dir: Path) -> list[dict[str, Any]]:
+def _rel_path(path: Path, root: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(root.resolve()))
+    except ValueError:
+        return str(path)
+
+
+def load_seeds(in_dir: Path, root: Path) -> list[dict[str, Any]]:
     seeds: list[dict[str, Any]] = []
     for seed_dir in sorted(in_dir.glob("seed-*")):
         if not seed_dir.is_dir():
@@ -76,7 +83,7 @@ def load_seeds(in_dir: Path) -> list[dict[str, Any]]:
         seeds.append(
             {
                 "seed": seed_id,
-                "report_path": str(report_path),
+                "report_path": _rel_path(report_path, root),
                 "episodes": report["summary"]["episodes"],
                 "compact_success_rate": float(compact["success_rate"]),
                 "full_state_success_rate": float(full_state["success_rate"]),
@@ -308,7 +315,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    seeds = load_seeds(args.in_dir)
+    seeds = load_seeds(args.in_dir, root)
     if not seeds:
         raise SystemExit(f"No seed reports found under {args.in_dir}")
 
