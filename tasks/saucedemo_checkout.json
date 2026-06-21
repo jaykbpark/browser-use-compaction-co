@@ -1,0 +1,18 @@
+{
+  "id": "saucedemo_checkout",
+  "goal": "Log in, add an item, and complete the checkout information step.",
+  "start_url": "https://www.saucedemo.com/",
+  "actions": [
+    {"type": "type", "target": "Username", "text": "standard_user"},
+    {"type": "type", "target": "Password", "text": "secret_sauce"},
+    {"type": "click", "target": "Login"},
+    {"type": "click", "target": "Add to cart"},
+    {"type": "click", "target": "css=.shopping_cart_link"},
+    {"type": "click", "target": "Checkout"},
+    {"type": "type", "target": "First Name", "text": "Ada"},
+    {"type": "type", "target": "Last Name", "text": "Lovelace"},
+    {"type": "type", "target": "Zip/Postal Code", "text": "94016"},
+    {"type": "click", "target": "Continue"}
+  ],
+  "success_hint": "Checkout overview page shows the selected item and totals."
+}

@@ -36,14 +36,23 @@ async def _record_tasks(tasks: list[dict], headed: bool) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Baseline vs compact A/B eval.")
-    parser.add_argument("--tasks", nargs="+", type=Path, required=True, help="Task JSON files.")
+    parser.add_argument(
+        "--tasks",
+        nargs="+",
+        type=Path,
+        default=None,
+        help="Task JSON files (default: every tasks/*.json).",
+    )
     parser.add_argument("--runs-root", type=Path, default=None, help="Runs directory (default: RUNS_DIR).")
     parser.add_argument("--out", type=Path, default=ROOT / "eval_report.json")
     parser.add_argument("--record", action="store_true", help="Record runs live before evaluating.")
     parser.add_argument("--headed", action="store_true", help="Record with a visible browser window.")
     args = parser.parse_args()
 
-    tasks = _load_tasks(args.tasks)
+    task_paths = args.tasks or sorted((ROOT / "tasks").glob("*.json"))
+    if not task_paths:
+        parser.error("no task files found")
+    tasks = _load_tasks(task_paths)
     runs_root = args.runs_root or get_settings().runs_dir
 
     if args.record:

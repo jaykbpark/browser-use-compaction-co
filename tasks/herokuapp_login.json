@@ -1,0 +1,12 @@
+{
+  "id": "herokuapp_login",
+  "goal": "Log in to the form-authentication demo with valid credentials.",
+  "start_url": "https://the-internet.herokuapp.com/login",
+  "actions": [
+    {"type": "type", "target": "Username", "text": "tomsmith"},
+    {"type": "type", "target": "Password", "text": "SuperSecretPassword!"},
+    {"type": "click", "target": "Login"},
+    {"type": "click", "target": "Logout"}
+  ],
+  "success_hint": "Secure area flash message appears, then logout returns to login."
+}

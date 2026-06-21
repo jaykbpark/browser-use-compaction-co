@@ -158,6 +158,21 @@ def _strip_target_prefix(target: str) -> str:
     return target
 
 
+def _is_selector_target(target: str | None) -> bool:
+    """True when the target is an explicit locator (css=/text=/...).
+
+    Selector targets hand the agent an exact element, so they do not test
+    whether the element survived into the observation -- they are not grounding
+    samples.
+    """
+
+    return bool(target) and target.startswith(_TARGET_PREFIXES)
+
+
+def _needs_grounding(action: BrowserAction) -> bool:
+    return action.target is not None and not _is_selector_target(action.target)
+
+
 def _resolve_target(target: str, elements: list[InteractiveElement]) -> InteractiveElement | None:
     """Find the interactive element a target string refers to, if present."""
 
@@ -210,7 +225,7 @@ def _predict_next_action(
     otherwise the planner is forced into an exploratory fallback and mismatches.
     """
 
-    if not expected.target:
+    if not _needs_grounding(expected):
         return NextActionPrediction(
             predicted=expected.model_dump(mode="json", exclude_none=True),
             match=True,
@@ -294,7 +309,7 @@ def _evaluate_step(
         compact_available = observation.interactive[: config.compact_text_interactive_limit]
         next_action_eval = NextActionEval(
             expected_action=expected_next.model_dump(mode="json", exclude_none=True),
-            needs_grounding=expected_next.target is not None,
+            needs_grounding=_needs_grounding(expected_next),
             baseline=_predict_next_action(expected_next, baseline_available),
             compact=_predict_next_action(expected_next, compact_available),
         )

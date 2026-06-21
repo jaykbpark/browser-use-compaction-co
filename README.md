@@ -85,11 +85,14 @@ Compare the naive baseline observation (full page state + a screenshot every
 step) against BrowserDelta compact observations and write `eval_report.json`:
 
 ```bash
-# Evaluate runs already recorded under runs/
-python scripts/eval_ab.py --tasks tasks/docs_search.json tasks/shopping.json
+# Evaluate every tasks/*.json from runs already recorded under runs/
+python scripts/eval_ab.py
 
-# Or record the runs live first (needs Playwright + network)
-python scripts/eval_ab.py --tasks tasks/docs_search.json tasks/shopping.json --record
+# Record the runs live first (needs Playwright + network), then evaluate
+python scripts/eval_ab.py --record
+
+# Or scope to specific tasks
+python scripts/eval_ab.py --tasks tasks/shopping.json tasks/todomvc.json
 ```
 
 For each step the report records: baseline vs compact **token estimate**, the

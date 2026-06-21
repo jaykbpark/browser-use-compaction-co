@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-06-21T00:30:48.194134+00:00",
+  "generated_at": "2026-06-21T00:37:44.122349+00:00",
   "methodology": {
     "baseline": "Full after-state (url, title, all text lines, all interactive elements) serialized as JSON, plus one screenshot per step.",
     "compact": "BrowserDelta llm_observation text; a screenshot (crop or full) only when the codec routes to a vision fallback.",
@@ -178,6 +178,1072 @@
           "baseline_accuracy": null,
           "compact_accuracy": null,
           "agreement_rate": null
+        }
+      }
+    },
+    {
+      "task_id": "herokuapp_add_remove",
+      "goal": "Add several elements, then delete one.",
+      "run_path": "runs/herokuapp_add_remove",
+      "steps": [
+        {
+          "step": 1,
+          "action": {
+            "type": "click",
+            "target": "Add Element",
+            "metadata": {}
+          },
+          "action_ok": true,
+          "route_baseline": "full_state+screenshot",
+          "route_compact": "structural",
+          "fallback_needed": false,
+          "visual_changed_pct": 0.681,
+          "tokens_baseline": {
+            "text": 277,
+            "image": 1105,
+            "total": 1382
+          },
+          "tokens_compact": {
+            "text": 46,
+            "image": 0,
+            "total": 46
+          },
+          "token_savings_pct": 96.67,
+          "next_action_eval": {
+            "expected_action": {
+              "type": "click",
+              "target": "Add Element",
+              "metadata": {}
+            },
+            "needs_grounding": true,
+            "baseline": {
+              "predicted": {
+                "type": "click",
+                "target": "Add Element",
+                "metadata": {},
+                "resolved_ref": "e1"
+              },
+              "match": true,
+              "grounded": true
+            },
+            "compact": {
+              "predicted": {
+                "type": "click",
+                "target": "Add Element",
+                "metadata": {},
+                "resolved_ref": "e1"
+              },
+              "match": true,
+              "grounded": true
+            }
+          }
+        },
+        {
+          "step": 2,
+          "action": {
+            "type": "click",
+            "target": "Add Element",
+            "metadata": {}
+          },
+          "action_ok": true,
+          "route_baseline": "full_state+screenshot",
+          "route_compact": "structural",
+          "fallback_needed": false,
+          "visual_changed_pct": 0.411,
+          "tokens_baseline": {
+            "text": 346,
+            "image": 1105,
+            "total": 1451
+          },
+          "tokens_compact": {
+            "text": 35,
+            "image": 0,
+            "total": 35
+          },
+          "token_savings_pct": 97.59,
+          "next_action_eval": {
+            "expected_action": {
+              "type": "click",
+              "target": "Add Element",
+              "metadata": {}
+            },
+            "needs_grounding": true,
+            "baseline": {
+              "predicted": {
+                "type": "click",
+                "target": "Add Element",
+                "metadata": {},
+                "resolved_ref": "e1"
+              },
+              "match": true,
+              "grounded": true
+            },
+            "compact": {
+              "predicted": {
+                "type": "click",
+                "target": "Add Element",
+                "metadata": {},
+                "resolved_ref": "e1"
+              },
+              "match": true,
+              "grounded": true
+            }
+          }
+        },
+        {
+          "step": 3,
+          "action": {
+            "type": "click",
+            "target": "Add Element",
+            "metadata": {}
+          },
+          "action_ok": true,
+          "route_baseline": "full_state+screenshot",
+          "route_compact": "structural",
+          "fallback_needed": false,
+          "visual_changed_pct": 0.411,
+          "tokens_baseline": {
+            "text": 414,
+            "image": 1105,
+            "total": 1519
+          },
+          "tokens_compact": {
+            "text": 39,
+            "image": 0,
+            "total": 39
+          },
+          "token_savings_pct": 97.43,
+          "next_action_eval": {
+            "expected_action": {
+              "type": "click",
+              "target": "Delete",
+              "metadata": {}
+            },
+            "needs_grounding": true,
+            "baseline": {
+              "predicted": {
+                "type": "click",
+                "target": "Delete",
+                "metadata": {},
+                "resolved_ref": "e2"
+              },
+              "match": true,
+              "grounded": true
+            },
+            "compact": {
+              "predicted": {
+                "type": "click",
+                "target": "Delete",
+                "metadata": {},
+                "resolved_ref": "e2"
+              },
+              "match": true,
+              "grounded": true
+            }
+          }
+        },
+        {
+          "step": 4,
+          "action": {
+            "type": "click",
+            "target": "Delete",
+            "metadata": {}
+          },
+          "action_ok": true,
+          "route_baseline": "full_state+screenshot",
+          "route_compact": "structural",
+          "fallback_needed": false,
+          "visual_changed_pct": 0.411,
+          "tokens_baseline": {
+            "text": 346,
+            "image": 1105,
+            "total": 1451
+          },
+          "tokens_compact": {
+            "text": 40,
+            "image": 0,
+            "total": 40
+          },
+          "token_savings_pct": 97.24,
+          "next_action_eval": null
+        }
+      ],
+      "summary": {
+        "n_steps": 4,
+        "tokens": {
+          "baseline_total": 5803,
+          "compact_total": 160,
+          "savings_pct": 97.24,
+          "compression_ratio": 36.27
+        },
+        "routes_compact": {
+          "structural": 4
+        },
+        "fallback": {
+          "steps_with_fallback": 0,
+          "fallback_rate": 0.0
+        },
+        "next_action": {
+          "n_samples": 3,
+          "n_grounding_samples": 3,
+          "baseline_accuracy": 1.0,
+          "compact_accuracy": 1.0,
+          "agreement_rate": 1.0
+        }
+      }
+    },
+    {
+      "task_id": "herokuapp_checkboxes",
+      "goal": "Toggle the checkbox controls.",
+      "run_path": "runs/herokuapp_checkboxes",
+      "steps": [
+        {
+          "step": 1,
+          "action": {
+            "type": "click",
+            "target": "css=#checkboxes input:nth-child(1)",
+            "metadata": {}
+          },
+          "action_ok": true,
+          "route_baseline": "full_state+screenshot",
+          "route_compact": "structural",
+          "fallback_needed": false,
+          "visual_changed_pct": 0.014,
+          "tokens_baseline": {
+            "text": 272,
+            "image": 1105,
+            "total": 1377
+          },
+          "tokens_compact": {
+            "text": 33,
+            "image": 0,
+            "total": 33
+          },
+          "token_savings_pct": 97.6,
+          "next_action_eval": {
+            "expected_action": {
+              "type": "click",
+              "target": "css=#checkboxes input:nth-child(3)",
+              "metadata": {}
+            },
+            "needs_grounding": false,
+            "baseline": {
+              "predicted": {
+                "type": "click",
+                "target": "css=#checkboxes input:nth-child(3)",
+                "metadata": {}
+              },
+              "match": true,
+              "grounded": true
+            },
+            "compact": {
+              "predicted": {
+                "type": "click",
+                "target": "css=#checkboxes input:nth-child(3)",
+                "metadata": {}
+              },
+              "match": true,
+              "grounded": true
+            }
+          }
+        },
+        {
+          "step": 2,
+          "action": {
+            "type": "click",
+            "target": "css=#checkboxes input:nth-child(3)",
+            "metadata": {}
+          },
+          "action_ok": true,
+          "route_baseline": "full_state+screenshot",
+          "route_compact": "structural",
+          "fallback_needed": false,
+          "visual_changed_pct": 0.014,
+          "tokens_baseline": {
+            "text": 272,
+            "image": 1105,
+            "total": 1377
+          },
+          "tokens_compact": {
+            "text": 42,
+            "image": 0,
+            "total": 42
+          },
+          "token_savings_pct": 96.95,
+          "next_action_eval": null
+        }
+      ],
+      "summary": {
+        "n_steps": 2,
+        "tokens": {
+          "baseline_total": 2754,
+          "compact_total": 75,
+          "savings_pct": 97.28,
+          "compression_ratio": 36.72
+        },
+        "routes_compact": {
+          "structural": 2
+        },
+        "fallback": {
+          "steps_with_fallback": 0,
+          "fallback_rate": 0.0
+        },
+        "next_action": {
+          "n_samples": 1,
+          "n_grounding_samples": 0,
+          "baseline_accuracy": null,
+          "compact_accuracy": null,
+          "agreement_rate": null
+        }
+      }
+    },
+    {
+      "task_id": "herokuapp_login",
+      "goal": "Log in to the form-authentication demo with valid credentials.",
+      "run_path": "runs/herokuapp_login",
+      "steps": [
+        {
+          "step": 1,
+          "action": {
+            "type": "type",
+            "target": "Username",
+            "text": "tomsmith",
+            "metadata": {}
+          },
+          "action_ok": true,
+          "route_baseline": "full_state+screenshot",
+          "route_compact": "structural",
+          "fallback_needed": false,
+          "visual_changed_pct": 0.124,
+          "tokens_baseline": {
+            "text": 389,
+            "image": 1105,
+            "total": 1494
+          },
+          "tokens_compact": {
+            "text": 54,
+            "image": 0,
+            "total": 54
+          },
+          "token_savings_pct": 96.39,
+          "next_action_eval": {
+            "expected_action": {
+              "type": "type",
+              "target": "Password",
+              "text": "SuperSecretPassword!",
+              "metadata": {}
+            },
+            "needs_grounding": true,
+            "baseline": {
+              "predicted": {
+                "type": "request_full_screenshot",
+                "reason": "target_not_grounded"
+              },
+              "match": false,
+              "grounded": false
+            },
+            "compact": {
+              "predicted": {
+                "type": "request_full_screenshot",
+                "reason": "target_not_grounded"
+              },
+              "match": false,
+              "grounded": false
+            }
+          }
+        },
+        {
+          "step": 2,
+          "action": {
+            "type": "type",
+            "target": "Password",
+            "text": "SuperSecretPassword!",
+            "metadata": {}
+          },
+          "action_ok": true,
+          "route_baseline": "full_state+screenshot",
+          "route_compact": "structural",
+          "fallback_needed": false,
+          "visual_changed_pct": 0.224,
+          "tokens_baseline": {
+            "text": 399,
+            "image": 1105,
+            "total": 1504
+          },
+          "tokens_compact": {
+            "text": 67,
+            "image": 0,
+            "total": 67
+          },
+          "token_savings_pct": 95.55,
+          "next_action_eval": {
+            "expected_action": {
+              "type": "click",
+              "target": "Login",
+              "metadata": {}
+            },
+            "needs_grounding": true,
+            "baseline": {
+              "predicted": {
+                "type": "click",
+                "target": "Login",
+                "metadata": {},
+                "resolved_ref": "e3"
+              },
+              "match": true,
+              "grounded": true
+            },
+            "compact": {
+              "predicted": {
+                "type": "click",
+                "target": "Login",
+                "metadata": {},
+                "resolved_ref": "e3"
+              },
+              "match": true,
+              "grounded": true
+            }
+          }
+        },
+        {
+          "step": 3,
+          "action": {
+            "type": "click",
+            "target": "Login",
+            "metadata": {}
+          },
+          "action_ok": true,
+          "route_baseline": "full_state+screenshot",
+          "route_compact": "image_crop",
+          "fallback_needed": true,
+          "visual_changed_pct": 6.673,
+          "tokens_baseline": {
+            "text": 295,
+            "image": 1105,
+            "total": 1400
+          },
+          "tokens_compact": {
+            "text": 91,
+            "image": 2210,
+            "total": 2301
+          },
+          "token_savings_pct": -64.36,
+          "next_action_eval": {
+            "expected_action": {
+              "type": "click",
+              "target": "Logout",
+              "metadata": {}
+            },
+            "needs_grounding": true,
+            "baseline": {
+              "predicted": {
+                "type": "click",
+                "target": "Logout",
+                "metadata": {},
+                "resolved_ref": "e2"
+              },
+              "match": true,
+              "grounded": true
+            },
+            "compact": {
+              "predicted": {
+                "type": "click",
+                "target": "Logout",
+                "metadata": {},
+                "resolved_ref": "e2"
+              },
+              "match": true,
+              "grounded": true
+            }
+          }
+        },
+        {
+          "step": 4,
+          "action": {
+            "type": "click",
+            "target": "Logout",
+            "metadata": {}
+          },
+          "action_ok": true,
+          "route_baseline": "full_state+screenshot",
+          "route_compact": "image_crop",
+          "fallback_needed": true,
+          "visual_changed_pct": 2.982,
+          "tokens_baseline": {
+            "text": 463,
+            "image": 1105,
+            "total": 1568
+          },
+          "tokens_compact": {
+            "text": 80,
+            "image": 2040,
+            "total": 2120
+          },
+          "token_savings_pct": -35.2,
+          "next_action_eval": null
+        }
+      ],
+      "summary": {
+        "n_steps": 4,
+        "tokens": {
+          "baseline_total": 5966,
+          "compact_total": 4542,
+          "savings_pct": 23.87,
+          "compression_ratio": 1.31
+        },
+        "routes_compact": {
+          "structural": 2,
+          "image_crop": 2
+        },
+        "fallback": {
+          "steps_with_fallback": 2,
+          "fallback_rate": 0.5
+        },
+        "next_action": {
+          "n_samples": 3,
+          "n_grounding_samples": 3,
+          "baseline_accuracy": 0.667,
+          "compact_accuracy": 0.667,
+          "agreement_rate": 1.0
+        }
+      }
+    },
+    {
+      "task_id": "saucedemo_checkout",
+      "goal": "Log in, add an item, and complete the checkout information step.",
+      "run_path": "runs/saucedemo_checkout",
+      "steps": [
+        {
+          "step": 1,
+          "action": {
+            "type": "type",
+            "target": "Username",
+            "text": "standard_user",
+            "metadata": {}
+          },
+          "action_ok": true,
+          "route_baseline": "full_state+screenshot",
+          "route_compact": "structural",
+          "fallback_needed": false,
+          "visual_changed_pct": 0.037,
+          "tokens_baseline": {
+            "text": 294,
+            "image": 1105,
+            "total": 1399
+          },
+          "tokens_compact": {
+            "text": 48,
+            "image": 0,
+            "total": 48
+          },
+          "token_savings_pct": 96.57,
+          "next_action_eval": {
+            "expected_action": {
+              "type": "type",
+              "target": "Password",
+              "text": "secret_sauce",
+              "metadata": {}
+            },
+            "needs_grounding": true,
+            "baseline": {
+              "predicted": {
+                "type": "type",
+                "target": "Password",
+                "text": "secret_sauce",
+                "metadata": {},
+                "resolved_ref": "e2"
+              },
+              "match": true,
+              "grounded": true
+            },
+            "compact": {
+              "predicted": {
+                "type": "type",
+                "target": "Password",
+                "text": "secret_sauce",
+                "metadata": {},
+                "resolved_ref": "e2"
+              },
+              "match": true,
+              "grounded": true
+            }
+          }
+        },
+        {
+          "step": 2,
+          "action": {
+            "type": "type",
+            "target": "Password",
+            "text": "secret_sauce",
+            "metadata": {}
+          },
+          "action_ok": true,
+          "route_baseline": "full_state+screenshot",
+          "route_compact": "structural",
+          "fallback_needed": false,
+          "visual_changed_pct": 0.027,
+          "tokens_baseline": {
+            "text": 297,
+            "image": 1105,
+            "total": 1402
+          },
+          "tokens_compact": {
+            "text": 48,
+            "image": 0,
+            "total": 48
+          },
+          "token_savings_pct": 96.58,
+          "next_action_eval": {
+            "expected_action": {
+              "type": "click",
+              "target": "Login",
+              "metadata": {}
+            },
+            "needs_grounding": true,
+            "baseline": {
+              "predicted": {
+                "type": "click",
+                "target": "Login",
+                "metadata": {},
+                "resolved_ref": "e3"
+              },
+              "match": true,
+              "grounded": true
+            },
+            "compact": {
+              "predicted": {
+                "type": "click",
+                "target": "Login",
+                "metadata": {},
+                "resolved_ref": "e3"
+              },
+              "match": true,
+              "grounded": true
+            }
+          }
+        },
+        {
+          "step": 3,
+          "action": {
+            "type": "click",
+            "target": "Login",
+            "metadata": {}
+          },
+          "action_ok": true,
+          "route_baseline": "full_state+screenshot",
+          "route_compact": "image_crop",
+          "fallback_needed": true,
+          "visual_changed_pct": 28.654,
+          "tokens_baseline": {
+            "text": 2522,
+            "image": 1105,
+            "total": 3627
+          },
+          "tokens_compact": {
+            "text": 149,
+            "image": 2040,
+            "total": 2189
+          },
+          "token_savings_pct": 39.65,
+          "next_action_eval": {
+            "expected_action": {
+              "type": "click",
+              "target": "Add to cart",
+              "metadata": {}
+            },
+            "needs_grounding": true,
+            "baseline": {
+              "predicted": {
+                "type": "click",
+                "target": "Add to cart",
+                "metadata": {},
+                "resolved_ref": "e11"
+              },
+              "match": true,
+              "grounded": true
+            },
+            "compact": {
+              "predicted": {
+                "type": "click",
+                "target": "Add to cart",
+                "metadata": {},
+                "resolved_ref": "e11"
+              },
+              "match": true,
+              "grounded": true
+            }
+          }
+        },
+        {
+          "step": 4,
+          "action": {
+            "type": "click",
+            "target": "Add to cart",
+            "metadata": {}
+          },
+          "action_ok": true,
+          "route_baseline": "full_state+screenshot",
+          "route_compact": "structural",
+          "fallback_needed": false,
+          "visual_changed_pct": 0.117,
+          "tokens_baseline": {
+            "text": 2519,
+            "image": 1105,
+            "total": 3624
+          },
+          "tokens_compact": {
+            "text": 102,
+            "image": 0,
+            "total": 102
+          },
+          "token_savings_pct": 97.19,
+          "next_action_eval": {
+            "expected_action": {
+              "type": "click",
+              "target": "css=.shopping_cart_link",
+              "metadata": {}
+            },
+            "needs_grounding": false,
+            "baseline": {
+              "predicted": {
+                "type": "click",
+                "target": "css=.shopping_cart_link",
+                "metadata": {}
+              },
+              "match": true,
+              "grounded": true
+            },
+            "compact": {
+              "predicted": {
+                "type": "click",
+                "target": "css=.shopping_cart_link",
+                "metadata": {}
+              },
+              "match": true,
+              "grounded": true
+            }
+          }
+        },
+        {
+          "step": 5,
+          "action": {
+            "type": "click",
+            "target": "css=.shopping_cart_link",
+            "metadata": {}
+          },
+          "action_ok": true,
+          "route_baseline": "full_state+screenshot",
+          "route_compact": "image_crop",
+          "fallback_needed": true,
+          "visual_changed_pct": 28.928,
+          "tokens_baseline": {
+            "text": 771,
+            "image": 1105,
+            "total": 1876
+          },
+          "tokens_compact": {
+            "text": 128,
+            "image": 2040,
+            "total": 2168
+          },
+          "token_savings_pct": -15.57,
+          "next_action_eval": {
+            "expected_action": {
+              "type": "click",
+              "target": "Checkout",
+              "metadata": {}
+            },
+            "needs_grounding": true,
+            "baseline": {
+              "predicted": {
+                "type": "click",
+                "target": "Checkout",
+                "metadata": {},
+                "resolved_ref": "e6"
+              },
+              "match": true,
+              "grounded": true
+            },
+            "compact": {
+              "predicted": {
+                "type": "click",
+                "target": "Checkout",
+                "metadata": {},
+                "resolved_ref": "e6"
+              },
+              "match": true,
+              "grounded": true
+            }
+          }
+        },
+        {
+          "step": 6,
+          "action": {
+            "type": "click",
+            "target": "Checkout",
+            "metadata": {}
+          },
+          "action_ok": true,
+          "route_baseline": "full_state+screenshot",
+          "route_compact": "image_crop",
+          "fallback_needed": true,
+          "visual_changed_pct": 9.449,
+          "tokens_baseline": {
+            "text": 784,
+            "image": 1105,
+            "total": 1889
+          },
+          "tokens_compact": {
+            "text": 138,
+            "image": 2040,
+            "total": 2178
+          },
+          "token_savings_pct": -15.3,
+          "next_action_eval": {
+            "expected_action": {
+              "type": "type",
+              "target": "First Name",
+              "text": "Ada",
+              "metadata": {}
+            },
+            "needs_grounding": true,
+            "baseline": {
+              "predicted": {
+                "type": "type",
+                "target": "First Name",
+                "text": "Ada",
+                "metadata": {},
+                "resolved_ref": "e3"
+              },
+              "match": true,
+              "grounded": true
+            },
+            "compact": {
+              "predicted": {
+                "type": "type",
+                "target": "First Name",
+                "text": "Ada",
+                "metadata": {},
+                "resolved_ref": "e3"
+              },
+              "match": true,
+              "grounded": true
+            }
+          }
+        },
+        {
+          "step": 7,
+          "action": {
+            "type": "type",
+            "target": "First Name",
+            "text": "Ada",
+            "metadata": {}
+          },
+          "action_ok": true,
+          "route_baseline": "full_state+screenshot",
+          "route_compact": "structural",
+          "fallback_needed": false,
+          "visual_changed_pct": 0.029,
+          "tokens_baseline": {
+            "text": 785,
+            "image": 1105,
+            "total": 1890
+          },
+          "tokens_compact": {
+            "text": 78,
+            "image": 0,
+            "total": 78
+          },
+          "token_savings_pct": 95.87,
+          "next_action_eval": {
+            "expected_action": {
+              "type": "type",
+              "target": "Last Name",
+              "text": "Lovelace",
+              "metadata": {}
+            },
+            "needs_grounding": true,
+            "baseline": {
+              "predicted": {
+                "type": "type",
+                "target": "Last Name",
+                "text": "Lovelace",
+                "metadata": {},
+                "resolved_ref": "e4"
+              },
+              "match": true,
+              "grounded": true
+            },
+            "compact": {
+              "predicted": {
+                "type": "type",
+                "target": "Last Name",
+                "text": "Lovelace",
+                "metadata": {},
+                "resolved_ref": "e4"
+              },
+              "match": true,
+              "grounded": true
+            }
+          }
+        },
+        {
+          "step": 8,
+          "action": {
+            "type": "type",
+            "target": "Last Name",
+            "text": "Lovelace",
+            "metadata": {}
+          },
+          "action_ok": true,
+          "route_baseline": "full_state+screenshot",
+          "route_compact": "structural",
+          "fallback_needed": false,
+          "visual_changed_pct": 0.027,
+          "tokens_baseline": {
+            "text": 787,
+            "image": 1105,
+            "total": 1892
+          },
+          "tokens_compact": {
+            "text": 78,
+            "image": 0,
+            "total": 78
+          },
+          "token_savings_pct": 95.88,
+          "next_action_eval": {
+            "expected_action": {
+              "type": "type",
+              "target": "Zip/Postal Code",
+              "text": "94016",
+              "metadata": {}
+            },
+            "needs_grounding": true,
+            "baseline": {
+              "predicted": {
+                "type": "type",
+                "target": "Zip/Postal Code",
+                "text": "94016",
+                "metadata": {},
+                "resolved_ref": "e5"
+              },
+              "match": true,
+              "grounded": true
+            },
+            "compact": {
+              "predicted": {
+                "type": "type",
+                "target": "Zip/Postal Code",
+                "text": "94016",
+                "metadata": {},
+                "resolved_ref": "e5"
+              },
+              "match": true,
+              "grounded": true
+            }
+          }
+        },
+        {
+          "step": 9,
+          "action": {
+            "type": "type",
+            "target": "Zip/Postal Code",
+            "text": "94016",
+            "metadata": {}
+          },
+          "action_ok": true,
+          "route_baseline": "full_state+screenshot",
+          "route_compact": "structural",
+          "fallback_needed": false,
+          "visual_changed_pct": 0.047,
+          "tokens_baseline": {
+            "text": 788,
+            "image": 1105,
+            "total": 1893
+          },
+          "tokens_compact": {
+            "text": 82,
+            "image": 0,
+            "total": 82
+          },
+          "token_savings_pct": 95.67,
+          "next_action_eval": {
+            "expected_action": {
+              "type": "click",
+              "target": "Continue",
+              "metadata": {}
+            },
+            "needs_grounding": true,
+            "baseline": {
+              "predicted": {
+                "type": "click",
+                "target": "Continue",
+                "metadata": {},
+                "resolved_ref": "e7"
+              },
+              "match": true,
+              "grounded": true
+            },
+            "compact": {
+              "predicted": {
+                "type": "click",
+                "target": "Continue",
+                "metadata": {},
+                "resolved_ref": "e7"
+              },
+              "match": true,
+              "grounded": true
+            }
+          }
+        },
+        {
+          "step": 10,
+          "action": {
+            "type": "click",
+            "target": "Continue",
+            "metadata": {}
+          },
+          "action_ok": true,
+          "route_baseline": "full_state+screenshot",
+          "route_compact": "image_crop",
+          "fallback_needed": true,
+          "visual_changed_pct": 14.067,
+          "tokens_baseline": {
+            "text": 736,
+            "image": 1105,
+            "total": 1841
+          },
+          "tokens_compact": {
+            "text": 129,
+            "image": 2040,
+            "total": 2169
+          },
+          "token_savings_pct": -17.82,
+          "next_action_eval": null
+        }
+      ],
+      "summary": {
+        "n_steps": 10,
+        "tokens": {
+          "baseline_total": 21333,
+          "compact_total": 9140,
+          "savings_pct": 57.16,
+          "compression_ratio": 2.33
+        },
+        "routes_compact": {
+          "structural": 6,
+          "image_crop": 4
+        },
+        "fallback": {
+          "steps_with_fallback": 4,
+          "fallback_rate": 0.4
+        },
+        "next_action": {
+          "n_samples": 9,
+          "n_grounding_samples": 8,
+          "baseline_accuracy": 1.0,
+          "compact_accuracy": 1.0,
+          "agreement_rate": 1.0
         }
       }
     },
@@ -397,29 +1463,291 @@
           "agreement_rate": 1.0
         }
       }
+    },
+    {
+      "task_id": "todomvc",
+      "goal": "Add two todos and mark the first complete.",
+      "run_path": "runs/todomvc",
+      "steps": [
+        {
+          "step": 1,
+          "action": {
+            "type": "type",
+            "target": "What needs to be done?",
+            "text": "write eval harness",
+            "metadata": {}
+          },
+          "action_ok": true,
+          "route_baseline": "full_state+screenshot",
+          "route_compact": "structural",
+          "fallback_needed": false,
+          "visual_changed_pct": 0.115,
+          "tokens_baseline": {
+            "text": 380,
+            "image": 1105,
+            "total": 1485
+          },
+          "tokens_compact": {
+            "text": 66,
+            "image": 0,
+            "total": 66
+          },
+          "token_savings_pct": 95.56,
+          "next_action_eval": {
+            "expected_action": {
+              "type": "press",
+              "key": "Enter",
+              "metadata": {}
+            },
+            "needs_grounding": false,
+            "baseline": {
+              "predicted": {
+                "type": "press",
+                "key": "Enter",
+                "metadata": {}
+              },
+              "match": true,
+              "grounded": true
+            },
+            "compact": {
+              "predicted": {
+                "type": "press",
+                "key": "Enter",
+                "metadata": {}
+              },
+              "match": true,
+              "grounded": true
+            }
+          }
+        },
+        {
+          "step": 2,
+          "action": {
+            "type": "press",
+            "key": "Enter",
+            "metadata": {}
+          },
+          "action_ok": true,
+          "route_baseline": "full_state+screenshot",
+          "route_compact": "structural",
+          "fallback_needed": false,
+          "visual_changed_pct": 0.891,
+          "tokens_baseline": {
+            "text": 741,
+            "image": 1105,
+            "total": 1846
+          },
+          "tokens_compact": {
+            "text": 102,
+            "image": 0,
+            "total": 102
+          },
+          "token_savings_pct": 94.47,
+          "next_action_eval": {
+            "expected_action": {
+              "type": "type",
+              "target": "What needs to be done?",
+              "text": "run cloud eval",
+              "metadata": {}
+            },
+            "needs_grounding": true,
+            "baseline": {
+              "predicted": {
+                "type": "type",
+                "target": "What needs to be done?",
+                "text": "run cloud eval",
+                "metadata": {},
+                "resolved_ref": "e2"
+              },
+              "match": true,
+              "grounded": true
+            },
+            "compact": {
+              "predicted": {
+                "type": "type",
+                "target": "What needs to be done?",
+                "text": "run cloud eval",
+                "metadata": {},
+                "resolved_ref": "e2"
+              },
+              "match": true,
+              "grounded": true
+            }
+          }
+        },
+        {
+          "step": 3,
+          "action": {
+            "type": "type",
+            "target": "What needs to be done?",
+            "text": "run cloud eval",
+            "metadata": {}
+          },
+          "action_ok": true,
+          "route_baseline": "full_state+screenshot",
+          "route_compact": "structural",
+          "fallback_needed": false,
+          "visual_changed_pct": 0.083,
+          "tokens_baseline": {
+            "text": 745,
+            "image": 1105,
+            "total": 1850
+          },
+          "tokens_compact": {
+            "text": 84,
+            "image": 0,
+            "total": 84
+          },
+          "token_savings_pct": 95.46,
+          "next_action_eval": {
+            "expected_action": {
+              "type": "press",
+              "key": "Enter",
+              "metadata": {}
+            },
+            "needs_grounding": false,
+            "baseline": {
+              "predicted": {
+                "type": "press",
+                "key": "Enter",
+                "metadata": {}
+              },
+              "match": true,
+              "grounded": true
+            },
+            "compact": {
+              "predicted": {
+                "type": "press",
+                "key": "Enter",
+                "metadata": {}
+              },
+              "match": true,
+              "grounded": true
+            }
+          }
+        },
+        {
+          "step": 4,
+          "action": {
+            "type": "press",
+            "key": "Enter",
+            "metadata": {}
+          },
+          "action_ok": true,
+          "route_baseline": "full_state+screenshot",
+          "route_compact": "structural",
+          "fallback_needed": false,
+          "visual_changed_pct": 0.823,
+          "tokens_baseline": {
+            "text": 814,
+            "image": 1105,
+            "total": 1919
+          },
+          "tokens_compact": {
+            "text": 83,
+            "image": 0,
+            "total": 83
+          },
+          "token_savings_pct": 95.67,
+          "next_action_eval": {
+            "expected_action": {
+              "type": "click",
+              "target": "css=.todo-list li:nth-child(1) .toggle",
+              "metadata": {}
+            },
+            "needs_grounding": false,
+            "baseline": {
+              "predicted": {
+                "type": "click",
+                "target": "css=.todo-list li:nth-child(1) .toggle",
+                "metadata": {}
+              },
+              "match": true,
+              "grounded": true
+            },
+            "compact": {
+              "predicted": {
+                "type": "click",
+                "target": "css=.todo-list li:nth-child(1) .toggle",
+                "metadata": {}
+              },
+              "match": true,
+              "grounded": true
+            }
+          }
+        },
+        {
+          "step": 5,
+          "action": {
+            "type": "click",
+            "target": "css=.todo-list li:nth-child(1) .toggle",
+            "metadata": {}
+          },
+          "action_ok": true,
+          "route_baseline": "full_state+screenshot",
+          "route_compact": "structural",
+          "fallback_needed": false,
+          "visual_changed_pct": 0.102,
+          "tokens_baseline": {
+            "text": 953,
+            "image": 1105,
+            "total": 2058
+          },
+          "tokens_compact": {
+            "text": 98,
+            "image": 0,
+            "total": 98
+          },
+          "token_savings_pct": 95.24,
+          "next_action_eval": null
+        }
+      ],
+      "summary": {
+        "n_steps": 5,
+        "tokens": {
+          "baseline_total": 9158,
+          "compact_total": 433,
+          "savings_pct": 95.27,
+          "compression_ratio": 21.15
+        },
+        "routes_compact": {
+          "structural": 5
+        },
+        "fallback": {
+          "steps_with_fallback": 0,
+          "fallback_rate": 0.0
+        },
+        "next_action": {
+          "n_samples": 4,
+          "n_grounding_samples": 1,
+          "baseline_accuracy": 1.0,
+          "compact_accuracy": 1.0,
+          "agreement_rate": 1.0
+        }
+      }
     }
   ],
   "overall_summary": {
-    "n_tasks": 2,
-    "n_steps": 7,
+    "n_tasks": 7,
+    "n_steps": 32,
     "tokens": {
-      "baseline_total": 16011,
-      "compact_total": 2577,
-      "savings_pct": 83.9,
-      "compression_ratio": 6.21
+      "baseline_total": 61025,
+      "compact_total": 16927,
+      "savings_pct": 72.26,
+      "compression_ratio": 3.61
     },
     "routes_compact": {
-      "structural": 6,
-      "image_crop": 1
+      "structural": 25,
+      "image_crop": 7
     },
     "fallback": {
-      "steps_with_fallback": 1,
-      "fallback_rate": 0.143
+      "steps_with_fallback": 7,
+      "fallback_rate": 0.219
     },
     "next_action": {
-      "n_grounding_samples": 3,
-      "baseline_accuracy": 1.0,
-      "compact_accuracy": 1.0
+      "n_grounding_samples": 18,
+      "baseline_accuracy": 0.944,
+      "compact_accuracy": 0.944
     }
   }
 }

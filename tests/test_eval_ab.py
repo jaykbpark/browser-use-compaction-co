@@ -4,6 +4,7 @@ from PIL import Image
 
 from browserdelta.eval.ab import (
     EvalConfig,
+    _needs_grounding,
     estimate_image_tokens,
     estimate_text_tokens,
     evaluate_run,
@@ -24,6 +25,12 @@ def test_estimate_text_tokens_matches_codec_heuristic():
     assert estimate_text_tokens("") == 0
     assert estimate_text_tokens("abcd") == 1
     assert estimate_text_tokens("a" * 400) == 100
+
+
+def test_needs_grounding_excludes_selectors_and_targetless_actions():
+    assert _needs_grounding(BrowserAction(type="click", target="Login")) is True
+    assert _needs_grounding(BrowserAction(type="click", target="css=.cart")) is False
+    assert _needs_grounding(BrowserAction(type="press", key="Enter")) is False
 
 
 def test_estimate_image_tokens_high_detail_tiling():

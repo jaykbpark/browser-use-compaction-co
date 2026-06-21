@@ -1,0 +1,13 @@
+{
+  "id": "todomvc",
+  "goal": "Add two todos and mark the first complete.",
+  "start_url": "https://demo.playwright.dev/todomvc/",
+  "actions": [
+    {"type": "type", "target": "What needs to be done?", "text": "write eval harness"},
+    {"type": "press", "key": "Enter"},
+    {"type": "type", "target": "What needs to be done?", "text": "run cloud eval"},
+    {"type": "press", "key": "Enter"},
+    {"type": "click", "target": "css=.todo-list li:nth-child(1) .toggle"}
+  ],
+  "success_hint": "Todo list grows and the first item becomes completed."
+}

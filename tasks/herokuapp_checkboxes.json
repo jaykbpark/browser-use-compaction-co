@@ -1,0 +1,10 @@
+{
+  "id": "herokuapp_checkboxes",
+  "goal": "Toggle the checkbox controls.",
+  "start_url": "https://the-internet.herokuapp.com/checkboxes",
+  "actions": [
+    {"type": "click", "target": "css=#checkboxes input:nth-child(1)"},
+    {"type": "click", "target": "css=#checkboxes input:nth-child(3)"}
+  ],
+  "success_hint": "Checkbox checked state changes are visible in structural diff."
+}

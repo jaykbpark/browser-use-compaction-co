@@ -1,0 +1,12 @@
+{
+  "id": "herokuapp_add_remove",
+  "goal": "Add several elements, then delete one.",
+  "start_url": "https://the-internet.herokuapp.com/add_remove_elements/",
+  "actions": [
+    {"type": "click", "target": "Add Element"},
+    {"type": "click", "target": "Add Element"},
+    {"type": "click", "target": "Add Element"},
+    {"type": "click", "target": "Delete"}
+  ],
+  "success_hint": "Delete buttons appear and decrease by one after a delete."
+}
