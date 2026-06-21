@@ -306,10 +306,6 @@ function App() {
       </header>
 
       <section className="controls" aria-label="Replay setup">
-        <div className="controls-title">
-          <p className="eyebrow">Replay setup</p>
-          <strong>Choose a saved task, then compare full browser state against BrowserDelta.</strong>
-        </div>
         <label>
           <span>Recorded task</span>
           <select value={selectedRun} onChange={(event) => setSelectedRun(event.target.value)}>
