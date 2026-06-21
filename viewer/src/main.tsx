@@ -94,11 +94,20 @@ function App() {
   }, []);
 
   React.useEffect(() => {
-    if (!selectedRun) return setDetail(null);
+    if (!selectedRun) {
+      setDetail(null);
+      return;
+    }
+    let cancelled = false;
+    setDetail(null);
     loadRun(selectedRun).then((run) => {
+      if (cancelled) return;
       setDetail(run);
       setSelectedStep(run.compact_observations[0]?.step ?? 1);
     });
+    return () => {
+      cancelled = true;
+    };
   }, [selectedRun]);
 
   async function run(label: string, url: string) {
@@ -122,11 +131,13 @@ function App() {
       `/api/runs/${enc(selectedRun)}/eval/compare?predictor=${enc(predictor)}&baseline_context_mode=vision_full_state`,
     );
 
-  const observations = detail?.compact_observations ?? [];
-  const totals = summarize(detail);
+  const activeDetail = detail?.run_id === selectedRun ? detail : null;
+  const observations = activeDetail?.compact_observations ?? [];
+  const totals = summarize(activeDetail);
   const current = observations.find((o) => o.step === selectedStep) ?? observations[0] ?? null;
-  const currentRaw = detail?.steps.find((s) => s.step === current?.step) ?? null;
-  const currentReplay = detail?.eval_report?.steps.find((s) => s.step === current?.step) ?? null;
+  const currentRaw = activeDetail?.steps.find((s) => s.step === current?.step) ?? null;
+  const currentReplay =
+    activeDetail?.eval_report?.steps.find((s) => s.step === current?.step) ?? null;
   const hasEval = totals.matched !== null && totals.total !== null;
 
   return (
@@ -220,8 +231,8 @@ function App() {
         <div className="layout">
           <nav className="steps">
             {observations.map((o) => {
-              const raw = detail?.steps.find((s) => s.step === o.step);
-              const replay = detail?.eval_report?.steps.find((s) => s.step === o.step);
+              const raw = activeDetail?.steps.find((s) => s.step === o.step);
+              const replay = activeDetail?.eval_report?.steps.find((s) => s.step === o.step);
               return (
                 <button
                   key={o.step}
