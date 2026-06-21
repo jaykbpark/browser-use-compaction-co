@@ -27,6 +27,9 @@ reports/*
 !reports/demo/
 reports/demo/*
 !reports/demo/miniwob-5seed-summary/
+!reports/demo/browserdelta-devpost.md
+!reports/demo/devpost-benchmark/
+!reports/demo/devpost-benchmark/**
 artifacts/
 
 *.log
