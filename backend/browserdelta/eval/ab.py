@@ -27,6 +27,8 @@ from __future__ import annotations
 
 import json
 import math
+import os
+import urllib.request
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -214,16 +216,62 @@ class NextActionEval:
     compact: NextActionPrediction
 
 
+def llm_choose_element(
+    goal: str,
+    target_hint: str,
+    candidates: list[InteractiveElement],
+    model: str = "gpt-4o-mini",
+) -> str | None:
+    """Ask an LLM which candidate element ref to act on. Returns the chosen ref.
+
+    Uses the OpenAI chat-completions API via the standard library only (no extra
+    dependency). Tests monkeypatch this function so no real API call is made.
+    """
+
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if not api_key:
+        raise RuntimeError("predictor='llm' requires OPENAI_API_KEY in the environment")
+
+    menu = "\n".join(f"{el.ref}: <{el.role}> {el.name!r}" for el in candidates if el.ref)
+    prompt = (
+        f"Goal: {goal}\n"
+        f"Next action target: {target_hint}\n"
+        "Available elements (ref: <role> name):\n"
+        f"{menu}\n\n"
+        "Reply with ONLY the ref of the element to interact with, or NONE."
+    )
+    body = json.dumps(
+        {
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0,
+        }
+    ).encode()
+    request = urllib.request.Request(
+        "https://api.openai.com/v1/chat/completions",
+        data=body,
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+    )
+    with urllib.request.urlopen(request, timeout=30) as response:  # noqa: S310
+        payload = json.loads(response.read())
+    answer = payload["choices"][0]["message"]["content"].strip()
+    return None if answer.upper().startswith("NONE") else answer.split()[0]
+
+
 def _predict_next_action(
     expected: BrowserAction,
     available: list[InteractiveElement],
+    predictor: str = "heuristic",
+    goal: str = "",
 ) -> NextActionPrediction:
-    """A deterministic planner: can the next scripted action be grounded?
+    """Plan the next scripted action: can it be grounded in the observation?
 
     Actions without a DOM target (press / scroll / wait / goto) are directly
     executable, so they always "match". Target-bearing actions match only when
     the referenced element is present in the observation the planner can see;
     otherwise the planner is forced into an exploratory fallback and mismatches.
+    The ``heuristic`` planner resolves the target deterministically; the ``llm``
+    planner asks a model to pick the element ref from the visible candidates.
     """
 
     if not _needs_grounding(expected):
@@ -233,8 +281,19 @@ def _predict_next_action(
             grounded=True,
         )
 
-    element = _resolve_target(expected.target, available)
-    if element is None:
+    truth = _resolve_target(expected.target, available)
+
+    if predictor == "llm":
+        chosen_ref = llm_choose_element(goal, expected.target, available)
+        grounded = chosen_ref is not None and any(el.ref == chosen_ref for el in available)
+        match = truth is not None and chosen_ref == truth.ref
+        predicted = expected.model_dump(mode="json", exclude_none=True)
+        predicted["resolved_ref"] = chosen_ref
+        if not match:
+            predicted["reason"] = "llm_pick_mismatch" if grounded else "target_not_grounded"
+        return NextActionPrediction(predicted=predicted, match=match, grounded=grounded)
+
+    if truth is None:
         return NextActionPrediction(
             predicted={"type": "request_full_screenshot", "reason": "target_not_grounded"},
             match=False,
@@ -242,7 +301,7 @@ def _predict_next_action(
         )
 
     predicted = expected.model_dump(mode="json", exclude_none=True)
-    predicted["resolved_ref"] = element.ref
+    predicted["resolved_ref"] = truth.ref
     return NextActionPrediction(predicted=predicted, match=True, grounded=True)
 
 
@@ -291,6 +350,8 @@ def _evaluate_step(
     observation: CompactObservation,
     expected_next: BrowserAction | None,
     config: EvalConfig,
+    predictor: str = "heuristic",
+    goal: str = "",
 ) -> StepEval:
     after_state = PageState.model_validate(read_json(run_path / step.after.state))
     after_screenshot = run_path / step.after.screenshot
@@ -311,8 +372,8 @@ def _evaluate_step(
         next_action_eval = NextActionEval(
             expected_action=expected_next.model_dump(mode="json", exclude_none=True),
             needs_grounding=_needs_grounding(expected_next),
-            baseline=_predict_next_action(expected_next, baseline_available),
-            compact=_predict_next_action(expected_next, compact_available),
+            baseline=_predict_next_action(expected_next, baseline_available, predictor, goal),
+            compact=_predict_next_action(expected_next, compact_available, predictor, goal),
         )
 
     return StepEval(
@@ -375,7 +436,7 @@ def _summarize_steps(steps: list[StepEval]) -> dict[str, Any]:
 #: Predictors the next-action grounding step supports. The eval ships with a
 #: deterministic heuristic planner only; this list is the extension point for an
 #: optional LLM planner without changing the call sites.
-SUPPORTED_PREDICTORS = ("heuristic",)
+SUPPORTED_PREDICTORS = ("heuristic", "llm")
 
 
 def evaluate_run(
@@ -412,6 +473,7 @@ def evaluate_run(
         raise ValueError(f"no compact_observations.jsonl in {run_path}")
 
     obs_by_step = {obs.step: obs for obs in observations}
+    goal = (task or {}).get("goal", "") or ""
 
     expected_actions: list[BrowserAction] = []
     if task and task.get("actions"):
@@ -425,7 +487,9 @@ def evaluate_run(
         # The agent picks action[index] (0-based) *after* seeing this step's
         # result; step index `index` recorded executing action[index].
         expected_next = expected_actions[index + 1] if index + 1 < len(expected_actions) else None
-        step_evals.append(_evaluate_step(run_path, step, observation, expected_next, cfg))
+        step_evals.append(
+            _evaluate_step(run_path, step, observation, expected_next, cfg, predictor, goal)
+        )
 
     return {
         "task_id": task.get("id") if task else run_path.name,

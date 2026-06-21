@@ -103,6 +103,29 @@ was needed**. Per-task and overall summaries roll these up. The methodology
 (modeled on WebArena / Mind2Web style step accuracy + cost) is documented inline
 in the report.
 
+## External Evals (BrowserGym / MiniWoB++)
+
+Demo BrowserDelta on a credible open-source browser-agent benchmark. BrowserGym
+is an **optional** extra; nothing in core depends on it.
+
+```bash
+pip install -e ".[external-evals]"
+python -m playwright install chromium
+git clone https://github.com/Farama-Foundation/miniwob-plusplus.git
+export MINIWOB_URL="file://$(pwd)/miniwob-plusplus/miniwob/html/miniwob/"
+
+# Record + compact one MiniWoB episode into BrowserDelta's run format
+python scripts/record_browsergym.py --env browsergym/miniwob.click-button \
+    --run-id bg_click_button --headless --compact
+
+# Run the small default suite, comparing compact vs full_state vs vision_full_state
+python scripts/eval_external_suite.py --suite browsergym-miniwob --predictor llm --compare
+```
+
+Reports land in `reports/external/` (gitignored). See
+[docs/external-evals.md](docs/external-evals.md) for the observation mapping,
+metrics, limitations, and the heavier benchmarks to add next.
+
 ## Browserbase Setup
 
 For local development, BrowserDelta falls back to a local Playwright Chromium
