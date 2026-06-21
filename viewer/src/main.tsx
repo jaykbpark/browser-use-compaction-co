@@ -1,14 +1,24 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import {
-  Activity,
-  AlertTriangle,
+  ArrowRight,
+  Check,
   CheckCircle2,
+  ChevronRight,
+  Coins,
+  Crop,
   FileText,
-  Gauge,
   Image,
+  Layers,
+  Camera,
   MousePointerClick,
   RefreshCw,
+  ScanLine,
+  Sparkles,
+  TrendingDown,
+  Trophy,
+  X,
+  XCircle,
 } from "lucide-react";
 import "./styles.css";
 
@@ -40,28 +50,6 @@ type StructuralChange = {
   detail: string;
 };
 
-type CompactObservation = {
-  step: number;
-  action_result: string;
-  summary: string;
-  changed: StructuralChange[];
-  visual_changed_pct: number;
-  visual_raw_changed_pct: number;
-  visual_ssim_score?: number | null;
-  visual_phash_distance?: number | null;
-  fallback: "none" | "crop" | "full_screenshot";
-  route: "text_only" | "crop_with_context" | "full_screenshot";
-  route_reason: string;
-  confidence: number;
-  llm_observation: string;
-  crop_paths: string[];
-  full_screenshot_path?: string | null;
-  visual_regions: VisualRegion[];
-  tokens_estimate: number;
-  baseline_tokens_estimate: number;
-  reduction_pct: number;
-};
-
 type VisualRegion = {
   bbox: {
     x: number;
@@ -77,6 +65,30 @@ type VisualRegion = {
   element_name?: string | null;
   overlap_pct: number;
   ocr_text?: string | null;
+};
+
+type Route = "text_only" | "crop_with_context" | "full_screenshot";
+
+type CompactObservation = {
+  step: number;
+  action_result: string;
+  summary: string;
+  changed: StructuralChange[];
+  visual_changed_pct: number;
+  visual_raw_changed_pct: number;
+  visual_ssim_score?: number | null;
+  visual_phash_distance?: number | null;
+  fallback: "none" | "crop" | "full_screenshot";
+  route: Route;
+  route_reason: string;
+  confidence: number;
+  llm_observation: string;
+  crop_paths: string[];
+  full_screenshot_path?: string | null;
+  visual_regions: VisualRegion[];
+  tokens_estimate: number;
+  baseline_tokens_estimate: number;
+  reduction_pct: number;
 };
 
 type ReplayStepResult = {
@@ -139,6 +151,27 @@ type RunDetail = {
   eval_comparison?: EvalComparisonReport | null;
 };
 
+const ROUTE_META: Record<
+  Route,
+  { label: string; blurb: string; icon: React.ReactNode }
+> = {
+  text_only: {
+    label: "Text only",
+    blurb: "Change explained in words — no image sent",
+    icon: <FileText size={14} />,
+  },
+  crop_with_context: {
+    label: "Crop + context",
+    blurb: "Small cropped regions sent alongside text",
+    icon: <Crop size={14} />,
+  },
+  full_screenshot: {
+    label: "Full screenshot",
+    blurb: "Whole page image sent — most expensive",
+    icon: <Camera size={14} />,
+  },
+};
+
 function App() {
   const [runs, setRuns] = React.useState<string[]>([]);
   const [selectedRun, setSelectedRun] = React.useState<string>("");
@@ -146,7 +179,7 @@ function App() {
   const [selectedStep, setSelectedStep] = React.useState(1);
   const [predictor, setPredictor] = React.useState<"heuristic" | "llm">("heuristic");
   const [status, setStatus] = React.useState("loading");
-  const [busy, setBusy] = React.useState(false);
+  const [busy, setBusy] = React.useState<null | string>(null);
 
   React.useEffect(() => {
     fetch("/api/runs")
@@ -178,143 +211,193 @@ function App() {
     detail?.eval_report?.steps.find((step) => step.step === selectedStep) ?? null;
   const stats = summarizeRun(detail);
 
-  async function compactSelectedRun() {
+  async function runAction(label: string, url: string) {
     if (!selectedRun) return;
-    setBusy(true);
+    setBusy(label);
     try {
-      await fetch(`/api/runs/${encodeURIComponent(selectedRun)}/compact`, { method: "POST" });
+      await fetch(url, { method: "POST" });
       setDetail(await loadRun(selectedRun));
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   }
 
-  async function evaluateSelectedRun() {
-    if (!selectedRun) return;
-    setBusy(true);
-    try {
-      await fetch(
-        `/api/runs/${encodeURIComponent(selectedRun)}/eval?predictor=${encodeURIComponent(predictor)}`,
-        { method: "POST" },
-      );
-      setDetail(await loadRun(selectedRun));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function compareSelectedRun() {
-    if (!selectedRun) return;
-    setBusy(true);
-    try {
-      await fetch(
-        `/api/runs/${encodeURIComponent(selectedRun)}/eval/compare?predictor=${encodeURIComponent(
-          predictor,
-        )}&baseline_context_mode=vision_full_state`,
-        { method: "POST" },
-      );
-      setDetail(await loadRun(selectedRun));
-    } finally {
-      setBusy(false);
-    }
-  }
+  const compact = () =>
+    runAction("compact", `/api/runs/${encodeURIComponent(selectedRun)}/compact`);
+  const evaluate = () =>
+    runAction(
+      "evaluate",
+      `/api/runs/${encodeURIComponent(selectedRun)}/eval?predictor=${encodeURIComponent(predictor)}`,
+    );
+  const compare = () =>
+    runAction(
+      "compare",
+      `/api/runs/${encodeURIComponent(selectedRun)}/eval/compare?predictor=${encodeURIComponent(
+        predictor,
+      )}&baseline_context_mode=vision_full_state`,
+    );
 
   return (
-    <main className="app-shell">
+    <main className="app">
       <header className="topbar">
-        <div>
-          <p className="eyebrow">BrowserDelta</p>
-          <h1>Run Inspector</h1>
+        <div className="brand">
+          <div className="brand-mark">
+            <Layers size={20} />
+          </div>
+          <div>
+            <h1>BrowserDelta</h1>
+            <p>Same agent decisions, a fraction of the tokens.</p>
+          </div>
         </div>
-        <div className="status-pill" data-state={status === "ready" ? "ok" : "warn"}>
-          {status === "ready" ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
-          <span>{status}</span>
+        <div className="topbar-right">
+          <div className="field">
+            <label htmlFor="run">Run</label>
+            <select
+              id="run"
+              value={selectedRun}
+              onChange={(event) => setSelectedRun(event.target.value)}
+            >
+              {runs.length === 0 ? <option>No runs</option> : null}
+              {runs.map((run) => (
+                <option key={run} value={run}>
+                  {run}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="predictor">Predictor</label>
+            <select
+              id="predictor"
+              value={predictor}
+              onChange={(event) => setPredictor(event.target.value as "heuristic" | "llm")}
+            >
+              <option value="heuristic">heuristic</option>
+              <option value="llm">llm</option>
+            </select>
+          </div>
+          <div className="actions">
+            <button
+              type="button"
+              className="btn"
+              onClick={compact}
+              disabled={!selectedRun || busy !== null}
+            >
+              <RefreshCw size={15} className={busy === "compact" ? "spin" : ""} />
+              Compact
+            </button>
+            <button
+              type="button"
+              className="btn"
+              onClick={evaluate}
+              disabled={!selectedRun || busy !== null}
+            >
+              <CheckCircle2 size={15} className={busy === "evaluate" ? "spin" : ""} />
+              Evaluate
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={compare}
+              disabled={!selectedRun || busy !== null}
+            >
+              <Trophy size={15} className={busy === "compare" ? "spin" : ""} />
+              Compare
+            </button>
+          </div>
+          <span className="status" data-state={status === "ready" ? "ok" : "warn"}>
+            {status}
+          </span>
         </div>
       </header>
 
-      <section className="toolbar" aria-label="Run controls">
-        <label>
-          Run
-          <select value={selectedRun} onChange={(event) => setSelectedRun(event.target.value)}>
-            {runs.length === 0 ? <option>No runs</option> : null}
-            {runs.map((run) => (
-              <option key={run} value={run}>
-                {run}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Predictor
-          <select
-            value={predictor}
-            onChange={(event) => setPredictor(event.target.value as "heuristic" | "llm")}
-          >
-            <option value="heuristic">heuristic</option>
-            <option value="llm">llm</option>
-          </select>
-        </label>
-        <button type="button" onClick={compactSelectedRun} disabled={!selectedRun || busy}>
-          <RefreshCw size={16} />
-          {busy ? "Compacting" : "Compact"}
-        </button>
-        <button type="button" onClick={evaluateSelectedRun} disabled={!selectedRun || busy}>
-          <CheckCircle2 size={16} />
-          Evaluate
-        </button>
-        <button type="button" onClick={compareSelectedRun} disabled={!selectedRun || busy}>
-          <Gauge size={16} />
-          Compare
-        </button>
-        {detail?.manifest ? (
-          <p className="run-meta">
-            {detail.manifest.mode ?? "unknown"} · {detail.manifest.start_url ?? "no start url"}
-          </p>
-        ) : null}
-      </section>
+      {detail?.manifest ? (
+        <p className="run-meta">
+          <span className="chip">{detail.manifest.mode ?? "unknown"}</span>
+          <span>{detail.manifest.start_url ?? "no start url"}</span>
+        </p>
+      ) : null}
 
-      <section className="stats-grid" aria-label="Run metrics">
-        <Metric icon={<Activity size={18} />} label="Steps" value={String(stats.steps)} />
-        <Metric icon={<Gauge size={18} />} label="Avg Saved" value={`${stats.avgReduction}%`} />
-        <Metric icon={<FileText size={18} />} label="Compact Tokens" value={String(stats.compact)} />
-        <Metric icon={<Image size={18} />} label="Image Fallbacks" value={String(stats.fallbacks)} />
-        <Metric icon={<CheckCircle2 size={18} />} label="Next Action" value={stats.replayScore} />
-        <Metric icon={<Gauge size={18} />} label="Vs Baseline" value={stats.comparisonScore} />
-        <Metric icon={<Gauge size={18} />} label="Predictor" value={stats.predictor} />
-      </section>
+      {detail?.eval_comparison ? (
+        <VerdictBanner comparison={detail.eval_comparison} />
+      ) : (
+        <Intro hasDetail={Boolean(detail)} hasCompact={Boolean(detail?.compact_observations.length)} />
+      )}
 
-      {detail?.eval_comparison ? <ComparisonPanel comparison={detail.eval_comparison} /> : null}
+      <section className="kpis" aria-label="Run metrics">
+        <Kpi label="Steps" value={String(stats.steps)} icon={<Layers size={16} />} />
+        <Kpi
+          label="Avg tokens saved"
+          value={`${stats.avgReduction}%`}
+          icon={<TrendingDown size={16} />}
+          tone="good"
+        />
+        <Kpi label="Compact tokens" value={stats.compact.toLocaleString()} icon={<Coins size={16} />} />
+        <Kpi
+          label="Image fallbacks"
+          value={String(stats.fallbacks)}
+          icon={<Image size={16} />}
+          tone={stats.fallbacks > 0 ? "warn" : undefined}
+        />
+        <Kpi
+          label="Next-action score"
+          value={stats.replayScore}
+          icon={<CheckCircle2 size={16} />}
+        />
+        <Kpi label="Predictor" value={stats.predictor} icon={<Sparkles size={16} />} />
+      </section>
 
       <section className="workspace">
-        <aside className="step-list" aria-label="Steps">
-          <div className="section-heading">
-            <MousePointerClick size={16} />
-            <h2>Steps</h2>
+        <aside className="steps">
+          <div className="panel-head">
+            <span className="panel-title">
+              <MousePointerClick size={15} /> Steps
+            </span>
+            <RouteLegend />
           </div>
           {detail?.compact_observations.length ? (
-            detail.compact_observations.map((observation) => (
-              <button
-                key={observation.step}
-                type="button"
-                className="step-row"
-                data-selected={observation.step === selectedStep}
-                onClick={() => setSelectedStep(observation.step)}
-              >
-                <span className="step-number">{observation.step}</span>
-                <span>
-                  <span className={`route route-${observation.route}`}>
-                    {formatRoute(observation.route)}
-                  </span>
-                  <strong>{observation.summary}</strong>
-                </span>
-              </button>
-            ))
+            <ol className="step-list">
+              {detail.compact_observations.map((observation) => {
+                const replay = detail.eval_report?.steps.find(
+                  (step) => step.step === observation.step,
+                );
+                const raw = detail.steps.find((step) => step.step === observation.step);
+                return (
+                  <li key={observation.step}>
+                    <button
+                      type="button"
+                      className="step-row"
+                      data-selected={observation.step === selectedStep}
+                      onClick={() => setSelectedStep(observation.step)}
+                    >
+                      <span className="step-index">{observation.step}</span>
+                      <span className="step-body">
+                        <span className="step-top">
+                          <ActionChip action={raw?.action} compact />
+                          {replay ? <PassDot passed={replay.passed} /> : null}
+                        </span>
+                        <span className="step-summary">{observation.summary}</span>
+                        <span className="step-foot">
+                          <RouteBadge route={observation.route} small />
+                          <span className="saved" data-zero={observation.reduction_pct <= 0}>
+                            <TrendingDown size={12} /> {observation.reduction_pct.toFixed(0)}% saved
+                          </span>
+                        </span>
+                      </span>
+                      <ChevronRight size={16} className="step-caret" />
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
           ) : (
-            <p className="empty">No compact observations yet. Run compact to generate them.</p>
+            <p className="empty">
+              No compact observations yet. Pick a run and press <strong>Compact</strong>.
+            </p>
           )}
         </aside>
 
-        <section className="detail-pane" aria-label="Selected step detail">
+        <section className="detail">
           {selectedObservation ? (
             <StepDetail
               runId={selectedRun}
@@ -323,7 +406,7 @@ function App() {
               replayStep={selectedReplayStep}
             />
           ) : (
-            <p className="empty">Select a run and compact it to inspect observations.</p>
+            <p className="empty">Select a step to inspect what the agent saw and decided.</p>
           )}
         </section>
       </section>
@@ -331,70 +414,141 @@ function App() {
   );
 }
 
-function Metric({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-}) {
+function Intro({ hasDetail, hasCompact }: { hasDetail: boolean; hasCompact: boolean }) {
   return (
-    <article className="metric">
-      <div className="metric-icon">{icon}</div>
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </article>
+    <section className="intro">
+      <p className="intro-lead">
+        BrowserDelta replaces full page screenshots with compact, text-first observations of
+        <em> what changed</em> after each action. This view proves the agent still picks the right
+        next action — while spending far fewer tokens.
+      </p>
+      <ol className="intro-steps">
+        <li data-done={hasDetail}>
+          <span className="intro-num">1</span> Pick a run
+        </li>
+        <li data-done={hasCompact}>
+          <span className="intro-num">2</span> <strong>Compact</strong> it into observations
+        </li>
+        <li>
+          <span className="intro-num">3</span> <strong>Compare</strong> against the screenshot baseline
+        </li>
+      </ol>
+    </section>
   );
 }
 
-function ComparisonPanel({ comparison }: { comparison: EvalComparisonReport }) {
+function VerdictBanner({ comparison }: { comparison: EvalComparisonReport }) {
   const summary = comparison.summary;
   const baselineLabel = formatContextMode(
     summary.baseline_context_mode ?? comparison.baseline.context_mode,
   );
+  const tone = verdictTone(comparison.verdict);
   return (
-    <section className="comparison-panel" aria-label="Compact versus baseline eval">
-      <div className="comparison-result">
-        <p className="eyebrow">Eval Comparison</p>
+    <section className={`verdict tone-${tone}`} aria-label="Eval verdict">
+      <div className="verdict-main">
+        <span className="verdict-eyebrow">
+          <Trophy size={14} /> Eval verdict
+        </span>
         <h2>{humanizeVerdict(comparison.verdict)}</h2>
         <p>
-          Compact got {summary.compact_passed_steps}/{summary.evaluated_steps}; {baselineLabel} got{" "}
-          {summary.baseline_passed_steps}/{summary.evaluated_steps}. Compact saved{" "}
-          {summary.token_reduction_pct.toFixed(2)}% estimated tokens.
+          Compact context picked the right next action{" "}
+          <strong>
+            {summary.compact_passed_steps}/{summary.evaluated_steps}
+          </strong>{" "}
+          times — matching the {baselineLabel.toLowerCase()} baseline (
+          {summary.baseline_passed_steps}/{summary.evaluated_steps}) while using{" "}
+          <strong>{summary.token_reduction_pct.toFixed(1)}% fewer tokens</strong>.
         </p>
       </div>
-      <dl className="comparison-metrics">
-        <div>
-          <dt>Compact</dt>
-          <dd>
-            {summary.compact_passed_steps}/{summary.evaluated_steps}
-          </dd>
+
+      <div className="verdict-stats">
+        <div className="vstat">
+          <span className="vstat-label">Accuracy parity</span>
+          <span className="vstat-value">
+            {pct(summary.compact_accuracy)}
+            <span className="vstat-vs">vs {pct(summary.baseline_accuracy)}</span>
+          </span>
         </div>
-        <div>
-          <dt>{baselineLabel}</dt>
-          <dd>
-            {summary.baseline_passed_steps}/{summary.evaluated_steps}
-          </dd>
+        <div className="vstat highlight">
+          <span className="vstat-label">Tokens saved</span>
+          <span className="vstat-value">
+            {summary.token_reduction_pct.toFixed(1)}%
+            <span className="vstat-vs">{summary.token_savings.toLocaleString()} tokens</span>
+          </span>
         </div>
-        <div>
-          <dt>Saved</dt>
-          <dd>{summary.token_reduction_pct.toFixed(2)}%</dd>
-        </div>
-        <div>
-          <dt>Tokens</dt>
-          <dd>
-            {summary.compact_tokens} / {summary.baseline_tokens}
-          </dd>
-        </div>
-      </dl>
-      <ul className="comparison-explanation">
-        {comparison.explanation.map((line) => (
-          <li key={line}>{line}</li>
-        ))}
-      </ul>
+      </div>
+
+      <div className="verdict-bars">
+        <TokenBar
+          label="Compact"
+          tokens={summary.compact_tokens}
+          max={Math.max(summary.compact_tokens, summary.baseline_tokens)}
+          tone="compact"
+        />
+        <TokenBar
+          label={baselineLabel}
+          tokens={summary.baseline_tokens}
+          max={Math.max(summary.compact_tokens, summary.baseline_tokens)}
+          tone="baseline"
+        />
+      </div>
     </section>
+  );
+}
+
+function TokenBar({
+  label,
+  tokens,
+  max,
+  tone,
+}: {
+  label: string;
+  tokens: number;
+  max: number;
+  tone: "compact" | "baseline";
+}) {
+  const width = max > 0 ? Math.max((tokens / max) * 100, 2) : 0;
+  return (
+    <div className="token-bar">
+      <span className="token-bar-label">{label}</span>
+      <div className="token-track">
+        <div className={`token-fill ${tone}`} style={{ width: `${width}%` }} />
+      </div>
+      <span className="token-bar-value">{tokens.toLocaleString()}</span>
+    </div>
+  );
+}
+
+function Kpi({
+  label,
+  value,
+  icon,
+  tone,
+}: {
+  label: string;
+  value: string;
+  icon: React.ReactNode;
+  tone?: "good" | "warn";
+}) {
+  return (
+    <article className={`kpi${tone ? ` kpi-${tone}` : ""}`}>
+      <span className="kpi-icon">{icon}</span>
+      <span className="kpi-label">{label}</span>
+      <strong className="kpi-value">{value}</strong>
+    </article>
+  );
+}
+
+function RouteLegend() {
+  return (
+    <div className="legend">
+      {(Object.keys(ROUTE_META) as Route[]).map((route) => (
+        <span key={route} className="legend-item" title={ROUTE_META[route].blurb}>
+          <span className={`legend-dot route-${route}`} />
+          {ROUTE_META[route].label}
+        </span>
+      ))}
+    </div>
   );
 }
 
@@ -417,85 +571,63 @@ function StepDetail({
 
   return (
     <>
-      <div className="detail-header">
+      <div className="detail-head">
         <div>
-          <p className="eyebrow">Step {observation.step}</p>
+          <span className="eyebrow">Step {observation.step}</span>
           <h2>{observation.summary}</h2>
+          <div className="detail-action">
+            <span className="muted">Action taken</span>
+            <ActionChip action={rawStep?.action} />
+          </div>
         </div>
-        <span className={`route route-${observation.route}`}>{formatRoute(observation.route)}</span>
+        <RouteBadge route={observation.route} />
       </div>
 
-      <dl className="kv-grid">
-        <div>
-          <dt>Action</dt>
-          <dd>{formatAction(rawStep?.action)}</dd>
-        </div>
-        <div>
-          <dt>Saved</dt>
-          <dd>{observation.reduction_pct}%</dd>
-        </div>
-        <div>
-          <dt>Confidence</dt>
-          <dd>{Math.round(observation.confidence * 100)}%</dd>
-        </div>
-        <div>
-          <dt>Visual Change</dt>
-          <dd>{observation.visual_changed_pct}%</dd>
-        </div>
-        <div>
-          <dt>SSIM</dt>
-          <dd>{observation.visual_ssim_score?.toFixed(3) ?? "n/a"}</dd>
-        </div>
-        <div>
-          <dt>pHash</dt>
-          <dd>{observation.visual_phash_distance ?? "n/a"}</dd>
-        </div>
-      </dl>
+      {replayStep ? <DecisionCard replay={replayStep} /> : null}
 
-      <section className="observation-block">
-        <div className="section-heading">
-          <FileText size={16} />
-          <h3>LLM Observation</h3>
+      <section className="card">
+        <h3 className="card-title">
+          <Coins size={15} /> Compaction
+        </h3>
+        <p className="card-note">{observation.route_reason}</p>
+        <div className="token-compare">
+          <TokenBar
+            label="Compact"
+            tokens={observation.tokens_estimate}
+            max={Math.max(observation.tokens_estimate, observation.baseline_tokens_estimate)}
+            tone="compact"
+          />
+          <TokenBar
+            label="Baseline"
+            tokens={observation.baseline_tokens_estimate}
+            max={Math.max(observation.tokens_estimate, observation.baseline_tokens_estimate)}
+            tone="baseline"
+          />
+          <span className="token-saved-pill">
+            <TrendingDown size={13} /> {observation.reduction_pct.toFixed(1)}% saved
+          </span>
         </div>
-        <pre>{observation.llm_observation}</pre>
+        <dl className="metric-row">
+          <Metric label="Confidence" value={`${Math.round(observation.confidence * 100)}%`} />
+          <Metric label="Visual change" value={`${observation.visual_changed_pct}%`} />
+          <Metric label="SSIM" value={observation.visual_ssim_score?.toFixed(3) ?? "n/a"} />
+          <Metric label="pHash" value={observation.visual_phash_distance?.toString() ?? "n/a"} />
+        </dl>
       </section>
 
-      {replayStep ? (
-        <section className="replay-block" data-state={replayStep.passed ? "pass" : "fail"}>
-          <div className="section-heading">
-            {replayStep.passed ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
-            <h3>Replay Eval</h3>
-          </div>
-          <dl className="replay-grid">
-            <div>
-              <dt>Expected Next</dt>
-              <dd>{formatAction(replayStep.expected_next_action)}</dd>
-            </div>
-            <div>
-              <dt>Predicted Next</dt>
-              <dd>{formatAction(replayStep.predicted_next_action)}</dd>
-            </div>
-            <div>
-              <dt>Score</dt>
-              <dd>{replayStep.passed ? "Pass" : "Fail"}</dd>
-            </div>
-            <div>
-              <dt>Replay Confidence</dt>
-              <dd>{Math.round(replayStep.confidence * 100)}%</dd>
-            </div>
-          </dl>
-          <p>{replayStep.rationale}</p>
-          <p className="match-reason">{replayStep.match_reason}</p>
-        </section>
-      ) : null}
+      <section className="card">
+        <h3 className="card-title">
+          <ScanLine size={15} /> What the model read
+        </h3>
+        <pre className="observation">{observation.llm_observation}</pre>
+      </section>
 
       {observation.changed.length ? (
-        <section className="change-list">
-          <div className="section-heading">
-            <Activity size={16} />
-            <h3>Detected Changes</h3>
-          </div>
-          <ul>
+        <section className="card">
+          <h3 className="card-title">
+            <Sparkles size={15} /> Detected changes
+          </h3>
+          <ul className="change-list">
             {observation.changed.slice(0, 12).map((change, index) => (
               <li key={`${change.type}-${index}`}>
                 <code>{change.type}</code>
@@ -507,12 +639,11 @@ function StepDetail({
       ) : null}
 
       {observation.visual_regions?.length ? (
-        <section className="visual-region-list">
-          <div className="section-heading">
-            <Image size={16} />
-            <h3>Visual Regions</h3>
-          </div>
-          <ul>
+        <section className="card">
+          <h3 className="card-title">
+            <Crop size={15} /> Visual regions
+          </h3>
+          <ul className="change-list">
             {observation.visual_regions.slice(0, 8).map((region, index) => (
               <li key={`${region.kind}-${index}`}>
                 <code>{region.kind}</code>
@@ -529,15 +660,14 @@ function StepDetail({
       ) : null}
 
       {evidencePaths.length ? (
-        <section className="evidence">
-          <div className="section-heading">
-            <Image size={16} />
-            <h3>Evidence</h3>
-          </div>
+        <section className="card">
+          <h3 className="card-title">
+            <Image size={15} /> Evidence sent to the model
+          </h3>
           <div className="evidence-grid">
             {evidencePaths.map((path) => (
               <figure key={path}>
-                <img src={runFileUrl(runId, path)} alt={path} />
+                <img src={runFileUrl(runId, path)} alt={path} loading="lazy" />
                 <figcaption>{path}</figcaption>
               </figure>
             ))}
@@ -545,6 +675,85 @@ function StepDetail({
         </section>
       ) : null}
     </>
+  );
+}
+
+function DecisionCard({ replay }: { replay: ReplayStepResult }) {
+  return (
+    <section className={`card decision ${replay.passed ? "pass" : "fail"}`}>
+      <div className="decision-head">
+        <h3 className="card-title">
+          {replay.passed ? <Check size={15} /> : <X size={15} />} Next-action prediction
+        </h3>
+        <span className="verdict-pill">
+          {replay.passed ? (
+            <>
+              <CheckCircle2 size={14} /> Match
+            </>
+          ) : (
+            <>
+              <XCircle size={14} /> Mismatch
+            </>
+          )}
+        </span>
+      </div>
+      <div className="decision-compare">
+        <div className="decision-col">
+          <span className="muted">Expected</span>
+          <ActionChip action={replay.expected_next_action} />
+        </div>
+        <ArrowRight size={18} className="decision-arrow" />
+        <div className="decision-col">
+          <span className="muted">Predicted from compact context</span>
+          <ActionChip action={replay.predicted_next_action} />
+        </div>
+      </div>
+      <p className="decision-rationale">{replay.rationale}</p>
+      <p className="decision-meta">
+        {replay.match_reason} · model confidence {Math.round(replay.confidence * 100)}%
+      </p>
+    </section>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="metric">
+      <dt>{label}</dt>
+      <dd>{value}</dd>
+    </div>
+  );
+}
+
+function RouteBadge({ route, small }: { route: Route; small?: boolean }) {
+  const meta = ROUTE_META[route];
+  return (
+    <span className={`route-badge route-${route}${small ? " small" : ""}`} title={meta.blurb}>
+      {meta.icon}
+      {meta.label}
+    </span>
+  );
+}
+
+function PassDot({ passed }: { passed: boolean }) {
+  return (
+    <span className={`pass-dot ${passed ? "pass" : "fail"}`} title={passed ? "Match" : "Mismatch"}>
+      {passed ? <Check size={11} /> : <X size={11} />}
+    </span>
+  );
+}
+
+function ActionChip({ action, compact }: { action?: BrowserAction | null; compact?: boolean }) {
+  if (!action) return <span className="action-chip">unknown</span>;
+  const target = action.target ?? action.key ?? action.url ?? "";
+  return (
+    <span className={`action-chip${compact ? " action-chip-sm" : ""}`}>
+      <span className={`verb verb-${action.type}`}>{action.type}</span>
+      {target ? <span className="action-target">{target}</span> : null}
+      {action.type === "type" && action.text ? (
+        <span className="action-text">“{action.text}”</span>
+      ) : null}
+    </span>
   );
 }
 
@@ -569,38 +778,31 @@ function summarizeRun(detail: RunDetail | null) {
     replayScore: detail?.eval_report
       ? `${detail.eval_report.passed_steps}/${detail.eval_report.evaluated_steps}`
       : "n/a",
-    comparisonScore: detail?.eval_comparison
-      ? `${detail.eval_comparison.summary.compact_passed_steps}/${detail.eval_comparison.summary.baseline_passed_steps}`
-      : "n/a",
-    predictor:
-      detail?.eval_comparison?.predictor ?? detail?.eval_report?.predictor ?? "n/a",
+    predictor: detail?.eval_comparison?.predictor ?? detail?.eval_report?.predictor ?? "n/a",
   };
 }
 
+function pct(value: number) {
+  return `${Math.round(value * 100)}%`;
+}
+
+function verdictTone(verdict: string): "good" | "bad" | "neutral" {
+  if (verdict.includes("loses")) return "bad";
+  if (verdict.includes("matches") || verdict.includes("beats")) return "good";
+  return "neutral";
+}
+
 function humanizeVerdict(verdict: string) {
-  if (verdict === "compact_matches_or_beats_baseline") return "Compact matches or beats baseline";
+  if (verdict === "compact_matches_or_beats_baseline") return "Compact matches or beats the baseline";
   if (verdict === "compact_matches_baseline_accuracy") return "Compact matches baseline accuracy";
   if (verdict === "compact_loses_accuracy") return "Compact loses accuracy";
   return verdict.replaceAll("_", " ");
 }
 
 function formatContextMode(mode: ReplayReport["context_mode"]) {
-  if (mode === "vision_full_state") return "Vision full state";
-  if (mode === "full_state") return "Full state";
+  if (mode === "vision_full_state") return "Vision full-state";
+  if (mode === "full_state") return "Full-state";
   return "Compact";
-}
-
-function formatRoute(route: CompactObservation["route"]) {
-  return route.replaceAll("_", " ");
-}
-
-function formatAction(action?: BrowserAction | null) {
-  if (!action) return "unknown";
-  if (action.type === "type") return `type ${action.target ?? ""}`;
-  if (action.type === "click") return `click ${action.target ?? ""}`;
-  if (action.type === "press") return `press ${action.key ?? ""}`;
-  if (action.type === "goto") return `goto ${action.url ?? ""}`;
-  return action.type;
 }
 
 function runFileUrl(runId: string, path: string) {
