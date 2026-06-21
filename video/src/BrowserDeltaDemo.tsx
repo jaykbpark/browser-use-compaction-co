@@ -1,36 +1,51 @@
 import React from "react";
 import {
   AbsoluteFill,
+  Audio,
   Easing,
   Img,
   Sequence,
+  Video,
   interpolate,
-  spring,
   staticFile,
   useCurrentFrame,
-  useVideoConfig,
 } from "remotion";
-import {assets, benchmark, demoCase} from "./data";
+import {assets, benchmark, demoCase, internalDemo, transcript} from "./data";
 
 export const WIDTH = 1920;
 export const HEIGHT = 1080;
 export const FPS = 30;
-export const DURATION_IN_FRAMES = 1980;
+export const DURATION_IN_FRAMES = 6258;
 
-const colors = {
-  bg: "#070b12",
-  panel: "#0f1724",
-  panel2: "#111b2b",
-  border: "#2b3c56",
-  text: "#f4f7fb",
-  muted: "#9fb0c8",
-  dim: "#65758f",
-  cyan: "#39d7cf",
-  green: "#6ae77d",
-  blue: "#5a9fff",
-  amber: "#ffcb5a",
-  orange: "#ff7a1a",
-  red: "#ff6767",
+const frame = (seconds: number) => Math.round(seconds * FPS);
+
+const scenes = {
+  intro: {from: frame(0), duration: frame(24.2)},
+  problem: {from: frame(24.2), duration: frame(23.7)},
+  insight: {from: frame(47.9), duration: frame(18.1)},
+  dom: {from: frame(66), duration: frame(20)},
+  visual: {from: frame(86), duration: frame(34.2)},
+  router: {from: frame(120.2), duration: frame(20.9)},
+  demo: {from: frame(141.1), duration: frame(28.8)},
+  benchmark: {from: frame(169.9), duration: frame(20.4)},
+  close: {from: frame(190.3), duration: frame(18.3)},
+};
+
+const palette = {
+  paper: "#f7f8f3",
+  paper2: "#ffffff",
+  ink: "#121611",
+  ink2: "#31372f",
+  muted: "#687064",
+  line: "#d8ddd2",
+  lineDark: "#aeb8a9",
+  green: "#0b6b2b",
+  green2: "#1a8a45",
+  cyan: "#188c85",
+  blue: "#3b6fb6",
+  amber: "#c88316",
+  red: "#b43a31",
+  black: "#111411",
 };
 
 const font = {
@@ -40,109 +55,140 @@ const font = {
     '"SF Mono", "JetBrains Mono", "Menlo", "Monaco", "Consolas", monospace',
 };
 
-const scene = {
-  title: {from: 0, duration: 165},
-  race: {from: 135, duration: 360},
-  loops: {from: 465, duration: 390},
-  visual: {from: 825, duration: 300},
-  demo: {from: 1095, duration: 375},
-  benchmark: {from: 1410, duration: 390},
-  close: {from: 1740, duration: 240},
-};
+const stageLabels = [
+  "intro",
+  "cost",
+  "layer",
+  "dom diff",
+  "visual diff",
+  "router",
+  "demo",
+  "eval",
+  "close",
+];
 
 const clamp = (value: number, min = 0, max = 1) =>
   Math.min(max, Math.max(min, value));
 
 const ease = (value: number) => Easing.out(Easing.cubic)(clamp(value));
 
-const progress = (frame: number, start: number, duration: number) =>
-  ease((frame - start) / duration);
+const progress = (frameValue: number, start: number, duration: number) =>
+  ease((frameValue - start) / duration);
 
-const fadeOpacity = (
-  frame: number,
-  duration: number,
-  inFrames = 18,
-  outFrames = 18,
-) => {
-  const fadeIn = interpolate(frame, [0, inFrames], [0, 1], {
+const fade = (frameValue: number, duration: number, inFrames = 16, outFrames = 16) => {
+  const fadeIn = interpolate(frameValue, [0, inFrames], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-  const fadeOut = interpolate(frame, [duration - outFrames, duration], [1, 0], {
+  const fadeOut = interpolate(frameValue, [duration - outFrames, duration], [1, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
   return Math.min(fadeIn, fadeOut);
 };
 
-const count = (frame: number, to: number, start: number, duration: number) =>
-  Math.round(to * progress(frame, start, duration));
+const number = (value: number, digits = 0) =>
+  value.toLocaleString("en-US", {
+    maximumFractionDigits: digits,
+    minimumFractionDigits: digits,
+  });
 
-const decimalCount = (
-  frame: number,
-  to: number,
-  start: number,
-  duration: number,
-  digits = 1,
-) => (to * progress(frame, start, duration)).toFixed(digits);
-
-const bgLine = "rgba(82, 124, 170, 0.12)";
-
-const Background = () => {
-  const frame = useCurrentFrame();
-  const drift = (frame * 0.28) % 110;
+const Base = ({
+  activeIndex,
+  children,
+}: {
+  activeIndex: number;
+  children: React.ReactNode;
+}) => {
+  const f = useCurrentFrame();
+  const drift = (f * 0.16) % 80;
   return (
-    <AbsoluteFill style={{backgroundColor: colors.bg, overflow: "hidden"}}>
-      <AbsoluteFill
-        style={{
-          background:
-            "radial-gradient(circle at 18% 15%, rgba(57,215,207,0.10), transparent 31%), radial-gradient(circle at 80% 10%, rgba(90,159,255,0.08), transparent 26%), linear-gradient(135deg, #070b12 0%, #0a111d 55%, #070b12 100%)",
-        }}
-      />
-      <AbsoluteFill
-        style={{
-          transform: `translateX(${-drift}px) skewX(-10deg)`,
-          backgroundImage: `repeating-linear-gradient(100deg, transparent 0px, transparent 95px, ${bgLine} 96px, transparent 97px)`,
-          opacity: 0.72,
-        }}
-      />
+    <AbsoluteFill
+      style={{
+        background: palette.paper,
+        color: palette.ink,
+        fontFamily: font.display,
+        overflow: "hidden",
+      }}
+    >
       <AbsoluteFill
         style={{
           backgroundImage:
-            "linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px)",
-          backgroundSize: "72px 72px",
-          opacity: 0.45,
+            "linear-gradient(rgba(11,107,43,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(11,107,43,0.05) 1px, transparent 1px)",
+          backgroundSize: "64px 64px",
+          transform: `translateX(${-drift}px)`,
+          opacity: 0.62,
         }}
       />
+      <AbsoluteFill
+        style={{
+          background:
+            "radial-gradient(circle at 82% 8%, rgba(24,140,133,0.10), transparent 30%), radial-gradient(circle at 4% 84%, rgba(11,107,43,0.08), transparent 32%)",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: 120,
+          right: 120,
+          top: 42,
+          height: 34,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          color: palette.muted,
+          fontFamily: font.mono,
+          fontSize: 15,
+          letterSpacing: 0,
+        }}
+      >
+        <span>BrowserDelta</span>
+        <div style={{display: "flex", gap: 10, alignItems: "center"}}>
+          {stageLabels.map((label, index) => (
+            <span
+              key={label}
+              style={{
+                padding: "5px 9px",
+                borderRadius: 999,
+                border: `1px solid ${
+                  index === activeIndex ? palette.green : "transparent"
+                }`,
+                color: index === activeIndex ? palette.green : palette.muted,
+                background:
+                  index === activeIndex ? "rgba(11,107,43,0.06)" : "transparent",
+              }}
+            >
+              {label}
+            </span>
+          ))}
+        </div>
+      </div>
+      <div style={{position: "absolute", inset: "92px 120px 78px"}}>
+        {children}
+      </div>
     </AbsoluteFill>
   );
 };
 
-const Shell = ({children}: {children: React.ReactNode}) => (
-  <AbsoluteFill>
-    <Background />
-    <AbsoluteFill style={{padding: "70px 88px"}}>{children}</AbsoluteFill>
-  </AbsoluteFill>
-);
-
-const Eyebrow = ({children}: {children: React.ReactNode}) => (
+const Kicker = ({children}: {children: React.ReactNode}) => (
   <div
     style={{
       fontFamily: font.mono,
+      color: palette.green,
       fontSize: 24,
-      letterSpacing: 0.8,
-      color: colors.cyan,
+      letterSpacing: 0,
       textTransform: "uppercase",
+      marginBottom: 16,
     }}
   >
     {children}
   </div>
 );
 
-const Headline = ({
+const Title = ({
   children,
-  size = 82,
-  maxWidth = 1250,
+  size = 84,
+  maxWidth = 1240,
 }: {
   children: React.ReactNode;
   size?: number;
@@ -152,38 +198,15 @@ const Headline = ({
     style={{
       margin: 0,
       maxWidth,
-      color: colors.text,
-      fontFamily: font.display,
       fontSize: size,
-      fontWeight: 520,
-      letterSpacing: -2.5,
-      lineHeight: 0.98,
+      lineHeight: 1.0,
+      letterSpacing: -2,
+      fontWeight: 620,
+      color: palette.ink,
     }}
   >
     {children}
   </h1>
-);
-
-const Subhead = ({
-  children,
-  maxWidth = 1120,
-}: {
-  children: React.ReactNode;
-  maxWidth?: number;
-}) => (
-  <p
-    style={{
-      margin: "22px 0 0",
-      maxWidth,
-      color: colors.muted,
-      fontFamily: font.display,
-      fontSize: 36,
-      fontWeight: 400,
-      lineHeight: 1.22,
-    }}
-  >
-    {children}
-  </p>
 );
 
 const Panel = ({
@@ -195,11 +218,11 @@ const Panel = ({
 }) => (
   <div
     style={{
-      background:
-        "linear-gradient(180deg, rgba(17,27,43,0.96), rgba(11,18,31,0.96))",
-      border: `1px solid ${colors.border}`,
-      borderRadius: 28,
-      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05)",
+      background: "rgba(255,255,255,0.84)",
+      border: `1px solid ${palette.line}`,
+      borderRadius: 26,
+      boxShadow: "0 24px 60px rgba(30, 42, 30, 0.08)",
+      overflow: "hidden",
       ...style,
     }}
   >
@@ -207,1039 +230,1255 @@ const Panel = ({
   </div>
 );
 
-const Pill = ({
-  children,
-  color = colors.cyan,
-  dim = false,
-}: {
-  children: React.ReactNode;
-  color?: string;
-  dim?: boolean;
-}) => (
-  <div
-    style={{
-      border: `1px solid ${dim ? colors.border : color}`,
-      color: dim ? colors.muted : color,
-      borderRadius: 999,
-      padding: "10px 16px",
-      fontFamily: font.mono,
-      fontSize: 23,
-      lineHeight: 1,
-      background: dim ? "rgba(255,255,255,0.025)" : "rgba(57,215,207,0.06)",
-      whiteSpace: "nowrap",
-    }}
-  >
-    {children}
-  </div>
-);
-
-const AssetImage = ({
+const Capture = ({
   src,
+  title,
   style,
 }: {
   src: string;
+  title?: string;
   style?: React.CSSProperties;
 }) => (
-  <Img
-    src={staticFile(src)}
+  <Panel style={{padding: 14, ...style}}>
+    {title ? (
+      <div
+        style={{
+          height: 34,
+          display: "flex",
+          alignItems: "center",
+          color: palette.muted,
+          fontFamily: font.mono,
+          fontSize: 15,
+          padding: "0 6px 10px",
+        }}
+      >
+        {title}
+      </div>
+    ) : null}
+    <Img
+      src={staticFile(src)}
+      style={{
+        display: "block",
+        width: "100%",
+        height: title ? "calc(100% - 34px)" : "100%",
+        objectFit: "contain",
+        borderRadius: 14,
+      }}
+    />
+  </Panel>
+);
+
+const StatPill = ({
+  label,
+  value,
+  tone = "green",
+}: {
+  label: string;
+  value: string;
+  tone?: "green" | "blue" | "amber" | "red" | "ink";
+}) => {
+  const color =
+    tone === "blue"
+      ? palette.blue
+      : tone === "amber"
+        ? palette.amber
+        : tone === "red"
+          ? palette.red
+          : tone === "ink"
+            ? palette.ink
+            : palette.green;
+  return (
+    <div
+      style={{
+        display: "inline-flex",
+        alignItems: "baseline",
+        gap: 12,
+        padding: "13px 18px",
+        border: `1px solid ${color}`,
+        borderRadius: 999,
+        color,
+        background: "rgba(255,255,255,0.70)",
+        fontFamily: font.mono,
+      }}
+    >
+      <strong style={{fontSize: 26, fontWeight: 700}}>{value}</strong>
+      <span style={{fontSize: 17, color: palette.muted}}>{label}</span>
+    </div>
+  );
+};
+
+export const BrowserDeltaDemo = () => {
+  return (
+    <AbsoluteFill>
+      <Audio src={staticFile(assets.voiceover)} />
+      <Sequence from={scenes.intro.from} durationInFrames={scenes.intro.duration}>
+        <IntroScene />
+      </Sequence>
+      <Sequence from={scenes.problem.from} durationInFrames={scenes.problem.duration}>
+        <ProblemScene />
+      </Sequence>
+      <Sequence from={scenes.insight.from} durationInFrames={scenes.insight.duration}>
+        <InsightScene />
+      </Sequence>
+      <Sequence from={scenes.dom.from} durationInFrames={scenes.dom.duration}>
+        <DomScene />
+      </Sequence>
+      <Sequence from={scenes.visual.from} durationInFrames={scenes.visual.duration}>
+        <VisualScene />
+      </Sequence>
+      <Sequence from={scenes.router.from} durationInFrames={scenes.router.duration}>
+        <RouterScene />
+      </Sequence>
+      <Sequence from={scenes.demo.from} durationInFrames={scenes.demo.duration}>
+        <DemoScene />
+      </Sequence>
+      <Sequence
+        from={scenes.benchmark.from}
+        durationInFrames={scenes.benchmark.duration}
+      >
+        <BenchmarkScene />
+      </Sequence>
+      <Sequence from={scenes.close.from} durationInFrames={scenes.close.duration}>
+        <CloseScene />
+      </Sequence>
+    </AbsoluteFill>
+  );
+};
+
+const IntroScene = () => {
+  const f = useCurrentFrame();
+  const opacity = fade(f, scenes.intro.duration, 16, 12);
+  const bubbleOut = progress(f, frame(16.2), frame(1.2));
+  const titleIn = progress(f, frame(1.2), frame(1.0));
+  return (
+    <Base activeIndex={0}>
+      <div style={{opacity, height: "100%", position: "relative"}}>
+        <div
+          style={{
+            position: "absolute",
+            top: 115,
+            left: 0,
+            transform: `translateY(${(1 - titleIn) * 28}px)`,
+            opacity: titleIn,
+          }}
+        >
+          <Kicker>changes-only context for browser agents</Kicker>
+          <Title size={118} maxWidth={1120}>
+            BrowserDelta
+          </Title>
+          <div
+            style={{
+              marginTop: 28,
+              maxWidth: 930,
+              fontSize: 42,
+              lineHeight: 1.12,
+              color: palette.ink2,
+            }}
+          >
+            A compaction layer that lets browser agents reason over what changed.
+          </div>
+        </div>
+        <div
+          style={{
+            position: "absolute",
+            right: 12,
+            bottom: 94,
+            width: 444,
+            height: 310,
+            borderRadius: 42,
+            overflow: "hidden",
+            border: `1px solid ${palette.lineDark}`,
+            background: palette.black,
+            boxShadow: "0 28px 80px rgba(18,22,17,0.22)",
+            opacity: 1 - bubbleOut,
+            transform: `scale(${1 - bubbleOut * 0.28}) translateY(${bubbleOut * 30}px)`,
+          }}
+        >
+          <Video
+            src={staticFile(assets.jayIntro)}
+            muted
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+            }}
+          />
+        </div>
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            bottom: 106,
+            display: "flex",
+            gap: 14,
+            opacity: progress(f, frame(9), frame(1.2)),
+          }}
+        >
+          <StatPill label="watch before/after" value="01" tone="ink" />
+          <StatPill label="emit compact observation" value="02" />
+        </div>
+      </div>
+    </Base>
+  );
+};
+
+const ProblemScene = () => {
+  const f = useCurrentFrame();
+  const opacity = fade(f, scenes.problem.duration, 12, 12);
+  const cycles = Math.min(7, Math.floor(f / 58) + 1);
+  const counter = Math.round(interpolate(f, [0, scenes.problem.duration - 70], [0, 19600], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  }));
+
+  return (
+    <Base activeIndex={1}>
+      <div style={{opacity, height: "100%"}}>
+        <Kicker>the problem</Kicker>
+        <Title size={86} maxWidth={1320}>
+          Browser agents keep paying to reread the whole page.
+        </Title>
+        <div
+          style={{
+            marginTop: 62,
+            display: "grid",
+            gridTemplateColumns: "1.05fr 0.95fr",
+            gap: 48,
+            height: 610,
+          }}
+        >
+          <Panel style={{padding: 36, position: "relative"}}>
+            <LoopNode label="browser" x={70} y={150} tone={palette.green} />
+            <LoopNode label="screenshot" x={358} y={150} tone={palette.red} active />
+            <LoopNode label="LLM" x={646} y={150} tone={palette.blue} />
+            <LoopNode label="action" x={358} y={382} tone={palette.ink} />
+            <Arrow x={263} y={192} w={86} />
+            <Arrow x={551} y={192} w={86} />
+            <Arrow x={686} y={304} w={90} rotate={90} />
+            <Arrow x={265} y={424} w={112} rotate={180} />
+            {Array.from({length: cycles}).map((_, index) => (
+              <div
+                key={index}
+                style={{
+                  position: "absolute",
+                  left: 114 + index * 28,
+                  bottom: 76 + index * 14,
+                  width: 232,
+                  height: 136,
+                  borderRadius: 12,
+                  border: `1px solid ${palette.red}`,
+                  background: "rgba(180,58,49,0.07)",
+                  transform: `rotate(${-4 + index * 1.2}deg)`,
+                  opacity: 0.28 + index * 0.08,
+                }}
+              />
+            ))}
+            <div
+              style={{
+                position: "absolute",
+                left: 92,
+                bottom: 42,
+                fontFamily: font.mono,
+                fontSize: 22,
+                color: palette.red,
+              }}
+            >
+              duplicate screenshots stack up
+            </div>
+          </Panel>
+          <Panel
+            style={{
+              padding: 44,
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+            }}
+          >
+            <div>
+              <div style={{fontFamily: font.mono, color: palette.red, fontSize: 24}}>
+                repeated context counter
+              </div>
+              <div
+                style={{
+                  marginTop: 26,
+                  fontFamily: font.mono,
+                  fontSize: 88,
+                  lineHeight: 1,
+                  fontWeight: 800,
+                  color: palette.red,
+                }}
+              >
+                {number(counter)}
+              </div>
+              <div style={{marginTop: 12, color: palette.muted, fontSize: 30}}>
+                screenshot/state tokens resent in the same browser task
+              </div>
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 18,
+              }}
+            >
+              <MiniFact label="state change" value="small" />
+              <MiniFact label="payload sent" value="whole page" tone="red" />
+            </div>
+          </Panel>
+        </div>
+      </div>
+    </Base>
+  );
+};
+
+const InsightScene = () => {
+  const f = useCurrentFrame();
+  const opacity = fade(f, scenes.insight.duration, 12, 12);
+  const insert = progress(f, frame(4.8), frame(1.3));
+  return (
+    <Base activeIndex={2}>
+      <div style={{opacity, height: "100%"}}>
+        <Kicker>the layer</Kicker>
+        <Title size={82} maxWidth={1410}>
+          Watch the transaction. Send the observation.
+        </Title>
+        <div
+          style={{
+            marginTop: 76,
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 40,
+            height: 590,
+          }}
+        >
+          <LoopCard title="Before" faded>
+            <FlowRow items={["browser", "full state", "agent"]} colors={[palette.green, palette.red, palette.blue]} />
+            <Payload label="full screenshot + DOM + accessibility tree" tone="red" />
+          </LoopCard>
+          <LoopCard title="After">
+            <div style={{position: "relative", height: 246}}>
+              <FlowRow
+                items={["browser", "BrowserDelta", "agent"]}
+                colors={[palette.green, palette.green, palette.blue]}
+                emphasisIndex={1}
+                scale={0.96 + insert * 0.04}
+              />
+            </div>
+            <Payload label="summary + route + token estimate + optional crop" />
+          </LoopCard>
+        </div>
+      </div>
+    </Base>
+  );
+};
+
+const DomScene = () => {
+  const f = useCurrentFrame();
+  const opacity = fade(f, scenes.dom.duration, 12, 12);
+  const rows = [
+    {time: 4.0, label: "+ button appeared", color: palette.green},
+    {time: 8.6, label: "~ visible text changed", color: palette.amber},
+    {time: 12.2, label: "* input focused", color: palette.cyan},
+  ];
+  return (
+    <Base activeIndex={3}>
+      <div style={{opacity, height: "100%"}}>
+        <Kicker>perception angle 01</Kicker>
+        <Title size={78} maxWidth={1360}>
+          DOM and accessibility diffs catch semantic changes first.
+        </Title>
+        <div
+          style={{
+            marginTop: 54,
+            display: "grid",
+            gridTemplateColumns: "1.1fr 0.9fr",
+            gap: 44,
+            height: 642,
+          }}
+        >
+          <Capture
+            src={assets.viewerFruitDone}
+            title="actual BrowserDelta viewer: text-only compact observation"
+          />
+          <Panel style={{padding: 40}}>
+            <div style={{fontFamily: font.mono, fontSize: 22, color: palette.green}}>
+              structural_diff.json
+            </div>
+            <div style={{marginTop: 30, display: "grid", gap: 18}}>
+              {rows.map((row) => {
+                const on = progress(f, frame(row.time), frame(0.55));
+                return (
+                  <div
+                    key={row.label}
+                    style={{
+                      opacity: on,
+                      transform: `translateX(${(1 - on) * 26}px)`,
+                      border: `1px solid ${row.color}`,
+                      borderRadius: 16,
+                      padding: "20px 22px",
+                      background: "rgba(255,255,255,0.76)",
+                      fontFamily: font.mono,
+                      fontSize: 32,
+                      color: row.color,
+                    }}
+                  >
+                    {row.label}
+                  </div>
+                );
+              })}
+            </div>
+            <div
+              style={{
+                marginTop: 34,
+                borderTop: `1px solid ${palette.line}`,
+                paddingTop: 28,
+                fontSize: 30,
+                lineHeight: 1.24,
+                color: palette.ink2,
+              }}
+            >
+              If the browser state explains the next action, no screenshot has to
+              move through the model.
+            </div>
+          </Panel>
+        </div>
+      </div>
+    </Base>
+  );
+};
+
+const VisualScene = () => {
+  const f = useCurrentFrame();
+  const opacity = fade(f, scenes.visual.duration, 12, 12);
+  const region = progress(f, frame(8), frame(0.9));
+  const ocr = progress(f, frame(14.4), frame(0.9));
+  const sim = progress(f, frame(22), frame(0.9));
+  return (
+    <Base activeIndex={4}>
+      <div style={{opacity, height: "100%"}}>
+        <Kicker>perception angle 02</Kicker>
+        <Title size={78} maxWidth={1420}>
+          When DOM cannot explain it, compare pixels around the change.
+        </Title>
+        <div
+          style={{
+            marginTop: 54,
+            display: "grid",
+            gridTemplateColumns: "1.02fr 0.98fr",
+            gap: 44,
+            height: 642,
+          }}
+        >
+          <div style={{position: "relative"}}>
+            <Capture
+              src={assets.viewerCanvasCrop}
+              title="real visual-crop route from the running viewer"
+              style={{height: "100%"}}
+            />
+            <RegionBox left={246} top={190} width={304} height={154} opacity={region} />
+            <RegionBox left={610} top={214} width={210} height={132} opacity={region} />
+          </div>
+          <Panel style={{padding: 38}}>
+            <PipelineStep
+              index="01"
+              title="changed regions"
+              body="pixel mask -> connected boxes -> nearby DOM anchors"
+              active={region}
+              tone={palette.green}
+            />
+            <PipelineStep
+              index="02"
+              title="OCR when useful"
+              body="read text inside the changed crop, not the full page"
+              active={ocr}
+              tone={palette.amber}
+            />
+            <PipelineStep
+              index="03"
+              title="SSIM + pHash"
+              body="score how large or uncertain the visual change is"
+              active={sim}
+              tone={palette.cyan}
+            />
+            <div
+              style={{
+                marginTop: 28,
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 18,
+              }}
+            >
+              <Gauge label="SSIM" value="0.42" active={sim} />
+              <Gauge label="pHash delta" value="high" active={sim} />
+            </div>
+          </Panel>
+        </div>
+      </div>
+    </Base>
+  );
+};
+
+const RouterScene = () => {
+  const f = useCurrentFrame();
+  const opacity = fade(f, scenes.router.duration, 12, 12);
+  const active = f < frame(7.0) ? 0 : f < frame(13.4) ? 1 : 2;
+  const routes = [
+    {
+      name: "text_only",
+      tone: palette.cyan,
+      title: "DOM explains it",
+      payload: "target_hint visible; button enabled; input focused",
+    },
+    {
+      name: "crop_with_context",
+      tone: palette.amber,
+      title: "small visual change",
+      payload: "summary + one crop + nearby DOM labels",
+    },
+    {
+      name: "full_screenshot",
+      tone: palette.red,
+      title: "large or uncertain",
+      payload: "fallback only when compact evidence is unsafe",
+    },
+  ];
+  return (
+    <Base activeIndex={5}>
+      <div style={{opacity, height: "100%"}}>
+        <Kicker>router</Kicker>
+        <Title size={78} maxWidth={1320}>
+          Pick the smallest observation that preserves the next action.
+        </Title>
+        <div style={{position: "relative", height: 680, marginTop: 42}}>
+          <Panel
+            style={{
+              position: "absolute",
+              left: 575,
+              top: 172,
+              width: 360,
+              height: 220,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              borderColor: palette.green,
+              background: "rgba(255,255,255,0.94)",
+            }}
+          >
+            <div style={{fontFamily: font.mono, fontSize: 24, color: palette.green}}>
+              BrowserDelta router
+            </div>
+            <div style={{marginTop: 16, fontSize: 42, fontWeight: 650}}>
+              how much context?
+            </div>
+          </Panel>
+          {routes.map((route, index) => (
+            <RouteCard
+              key={route.name}
+              route={route}
+              index={index}
+              active={active === index}
+              x={[40, 1040, 1040][index]}
+              y={[118, 54, 388][index]}
+            />
+          ))}
+          <RouterLine x1={400} y1={230} x2={575} y2={280} active={active === 0} />
+          <RouterLine x1={935} y1={235} x2={1040} y2={166} active={active === 1} />
+          <RouterLine x1={935} y1={332} x2={1040} y2={500} active={active === 2} />
+        </div>
+      </div>
+    </Base>
+  );
+};
+
+const DemoScene = () => {
+  const f = useCurrentFrame();
+  const opacity = fade(f, scenes.demo.duration, 12, 12);
+  const shot = f < frame(10)
+    ? assets.viewerFruitDone
+    : f < frame(20)
+      ? assets.viewerMiniwobTarget
+      : assets.viewerCanvasCrop;
+  return (
+    <Base activeIndex={6}>
+      <div style={{opacity, height: "100%"}}>
+        <Kicker>actual demo surface</Kicker>
+        <Title size={78} maxWidth={1340}>
+          The viewer shows the tradeoff step by step.
+        </Title>
+        <div
+          style={{
+            marginTop: 54,
+            display: "grid",
+            gridTemplateColumns: "1.16fr 0.84fr",
+            gap: 44,
+            height: 642,
+          }}
+        >
+          <Capture src={shot} title="running BrowserDelta app capture" />
+          <div style={{display: "grid", gridTemplateRows: "1fr 1fr", gap: 24}}>
+            <Panel style={{padding: 36}}>
+              <div style={{fontFamily: font.mono, color: palette.green, fontSize: 22}}>
+                compact observation
+              </div>
+              <pre
+                style={{
+                  margin: "24px 0 0",
+                  whiteSpace: "pre-wrap",
+                  fontFamily: font.mono,
+                  fontSize: 29,
+                  lineHeight: 1.42,
+                  color: palette.ink,
+                }}
+              >
+{`target_hint="faucibus" visible
+likely_click_ref=${demoCase.targetRef}
+route=text_only
+image_sent=false`}
+              </pre>
+            </Panel>
+            <Panel
+              style={{
+                padding: 36,
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 20,
+              }}
+            >
+              <BigStat value={`${internalDemo.nextActionPredictions}`} label="internal next-action checks" tone="ink" />
+              <BigStat value={`${internalDemo.tokenSavingsPct}%`} label="tokens saved in internal demo" tone="green" />
+            </Panel>
+          </div>
+        </div>
+      </div>
+    </Base>
+  );
+};
+
+const BenchmarkScene = () => {
+  const f = useCurrentFrame();
+  const opacity = fade(f, scenes.benchmark.duration, 12, 12);
+  const barIn = progress(f, frame(2.0), frame(1.2));
+  return (
+    <Base activeIndex={7}>
+      <div style={{opacity, height: "100%"}}>
+        <Kicker>MiniWoB 5-seed eval</Kicker>
+        <Title size={76} maxWidth={1420}>
+          Near-parity success, about one-sixth the decision context.
+        </Title>
+        <div
+          style={{
+            marginTop: 46,
+            display: "grid",
+            gridTemplateColumns: "0.98fr 1.02fr",
+            gap: 42,
+            height: 658,
+          }}
+        >
+          <Panel style={{padding: 40}}>
+            <ChartTitle title="success rate" subtitle={`${benchmark.seeds} seeds x ${benchmark.tasksPerSeed} tasks`} />
+            <Bar
+              label="BrowserDelta"
+              value={benchmark.compact.successPct}
+              max={55}
+              suffix="%"
+              color={palette.green}
+              progress={barIn}
+              note={`+/- ${benchmark.compact.successStdPct.toFixed(2)}%`}
+            />
+            <Bar
+              label="full_state"
+              value={benchmark.fullState.successPct}
+              max={55}
+              suffix="%"
+              color={palette.blue}
+              progress={barIn}
+              note={`+/- ${benchmark.fullState.successStdPct.toFixed(2)}%`}
+            />
+            <div style={{height: 34}} />
+            <ChartTitle title="avg decision tokens" subtitle="per episode" />
+            <Bar
+              label="BrowserDelta"
+              value={benchmark.compact.avgTokens}
+              max={3200}
+              suffix=""
+              color={palette.green}
+              progress={barIn}
+              note={`+/- ${number(benchmark.compact.avgTokensStd)}`}
+            />
+            <Bar
+              label="full_state"
+              value={benchmark.fullState.avgTokens}
+              max={3200}
+              suffix=""
+              color={palette.blue}
+              progress={barIn}
+              note={`+/- ${number(benchmark.fullState.avgTokensStd)}`}
+            />
+          </Panel>
+          <Panel
+            style={{
+              padding: 42,
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+            }}
+          >
+            <div>
+              <div style={{fontFamily: font.mono, color: palette.green, fontSize: 24}}>
+                average token reduction
+              </div>
+              <div
+                style={{
+                  marginTop: 22,
+                  fontFamily: font.mono,
+                  fontSize: 108,
+                  lineHeight: 0.95,
+                  fontWeight: 800,
+                  color: palette.green,
+                }}
+              >
+                {benchmark.tokenReductionPct.toFixed(1)}%
+              </div>
+              <div style={{marginTop: 18, fontSize: 31, color: palette.ink2}}>
+                Compact keeps about{" "}
+                {Math.round(
+                  (benchmark.compact.successPct / benchmark.fullState.successPct) * 100,
+                )}
+                % of full-state success while sending far less context.
+              </div>
+            </div>
+            <div style={{display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18}}>
+              <MiniFact label="both success" value={`${benchmark.outcomeClasses.bothSuccess}`} />
+              <MiniFact label="compact-only wins" value={`${benchmark.outcomeClasses.compactOnlySuccess}`} />
+              <MiniFact label="compact regressions" value={`${benchmark.outcomeClasses.compactRegression}`} tone="red" />
+              <MiniFact label="runner errors" value={`${benchmark.outcomeClasses.runnerError}`} tone="ink" />
+            </div>
+            <div
+              style={{
+                paddingTop: 18,
+                borderTop: `1px solid ${palette.line}`,
+                color: palette.muted,
+                fontFamily: font.mono,
+                fontSize: 19,
+              }}
+            >
+              seed example in VO: {benchmark.seedExample.compactSuccesses}/
+              {benchmark.seedExample.tasks} compact vs{" "}
+              {benchmark.seedExample.fullStateSuccesses}/{benchmark.seedExample.tasks} full_state
+            </div>
+          </Panel>
+        </div>
+      </div>
+    </Base>
+  );
+};
+
+const CloseScene = () => {
+  const f = useCurrentFrame();
+  const opacity = fade(f, scenes.close.duration, 12, 30);
+  const bubbleIn = progress(f, frame(14.2), frame(0.7));
+  return (
+    <Base activeIndex={8}>
+      <div style={{opacity, height: "100%", position: "relative"}}>
+        <div style={{position: "absolute", top: 172, left: 0}}>
+          <Kicker>BrowserDelta</Kicker>
+          <Title size={112} maxWidth={1370}>
+            Think changes, not full screenshots.
+          </Title>
+          <div style={{display: "flex", gap: 16, marginTop: 46}}>
+            <StatPill label="fewer decision tokens" value="84.2%" />
+            <StatPill label="5-seed MiniWoB" value="625" tone="ink" />
+            <StatPill label="near-parity success" value="94%" tone="blue" />
+          </div>
+        </div>
+        <div
+          style={{
+            position: "absolute",
+            right: 18,
+            bottom: 88,
+            width: 312,
+            height: 220,
+            borderRadius: 34,
+            overflow: "hidden",
+            border: `1px solid ${palette.lineDark}`,
+            opacity: bubbleIn,
+            transform: `translateY(${(1 - bubbleIn) * 28}px)`,
+          }}
+        >
+          <Video src={staticFile(assets.jayIntro)} muted style={{width: "100%", height: "100%", objectFit: "cover"}} />
+        </div>
+      </div>
+    </Base>
+  );
+};
+
+const LoopNode = ({
+  label,
+  x,
+  y,
+  tone,
+  active = false,
+}: {
+  label: string;
+  x: number;
+  y: number;
+  tone: string;
+  active?: boolean;
+}) => (
+  <div
     style={{
-      width: "100%",
-      height: "100%",
-      objectFit: "cover",
-      display: "block",
-      ...style,
+      position: "absolute",
+      left: x,
+      top: y,
+      width: 188,
+      height: 92,
+      borderRadius: 22,
+      border: `2px solid ${tone}`,
+      background: active ? "rgba(180,58,49,0.08)" : "rgba(255,255,255,0.78)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontFamily: font.mono,
+      fontSize: 23,
+      color: tone,
+      fontWeight: 700,
+    }}
+  >
+    {label}
+  </div>
+);
+
+const Arrow = ({
+  x,
+  y,
+  w,
+  rotate = 0,
+}: {
+  x: number;
+  y: number;
+  w: number;
+  rotate?: number;
+}) => (
+  <div
+    style={{
+      position: "absolute",
+      left: x,
+      top: y,
+      width: w,
+      height: 2,
+      background: palette.lineDark,
+      transform: `rotate(${rotate}deg)`,
+      transformOrigin: "left center",
+    }}
+  >
+    <div
+      style={{
+        position: "absolute",
+        right: -4,
+        top: -5,
+        width: 12,
+        height: 12,
+        borderRight: `2px solid ${palette.lineDark}`,
+        borderTop: `2px solid ${palette.lineDark}`,
+        transform: "rotate(45deg)",
+      }}
+    />
+  </div>
+);
+
+const MiniFact = ({
+  label,
+  value,
+  tone = "green",
+}: {
+  label: string;
+  value: string;
+  tone?: "green" | "red" | "ink";
+}) => {
+  const color = tone === "red" ? palette.red : tone === "ink" ? palette.ink : palette.green;
+  return (
+    <div
+      style={{
+        border: `1px solid ${palette.line}`,
+        borderRadius: 18,
+        padding: "18px 20px",
+        background: palette.paper2,
+      }}
+    >
+      <div style={{fontFamily: font.mono, fontSize: 29, fontWeight: 800, color}}>
+        {value}
+      </div>
+      <div style={{marginTop: 7, color: palette.muted, fontSize: 18}}>{label}</div>
+    </div>
+  );
+};
+
+const LoopCard = ({
+  title,
+  children,
+  faded = false,
+}: {
+  title: string;
+  children: React.ReactNode;
+  faded?: boolean;
+}) => (
+  <Panel
+    style={{
+      padding: 38,
+      opacity: faded ? 0.58 : 1,
+      borderColor: faded ? palette.line : palette.green,
+    }}
+  >
+    <div style={{fontFamily: font.mono, fontSize: 23, color: faded ? palette.muted : palette.green}}>
+      {title}
+    </div>
+    <div style={{marginTop: 42}}>{children}</div>
+  </Panel>
+);
+
+const FlowRow = ({
+  items,
+  colors,
+  emphasisIndex,
+  scale = 1,
+}: {
+  items: string[];
+  colors: string[];
+  emphasisIndex?: number;
+  scale?: number;
+}) => (
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "1fr 58px 1fr 58px 1fr",
+      alignItems: "center",
+      transform: `scale(${scale})`,
+      transformOrigin: "center",
+    }}
+  >
+    {items.map((item, index) => (
+      <React.Fragment key={item}>
+        <div
+          style={{
+            height: 128,
+            borderRadius: 24,
+            border: `2px solid ${colors[index]}`,
+            background:
+              index === emphasisIndex ? "rgba(11,107,43,0.08)" : "rgba(255,255,255,0.76)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: colors[index],
+            fontFamily: font.mono,
+            fontSize: index === emphasisIndex ? 26 : 23,
+            fontWeight: 800,
+          }}
+        >
+          {item}
+        </div>
+        {index < items.length - 1 ? <div style={{textAlign: "center", fontSize: 34}}>-&gt;</div> : null}
+      </React.Fragment>
+    ))}
+  </div>
+);
+
+const Payload = ({label, tone = "green"}: {label: string; tone?: "green" | "red"}) => {
+  const color = tone === "red" ? palette.red : palette.green;
+  return (
+    <div
+      style={{
+        marginTop: 56,
+        border: `1px solid ${color}`,
+        borderRadius: 18,
+        padding: "20px 22px",
+        fontFamily: font.mono,
+        fontSize: 24,
+        color,
+        background: "rgba(255,255,255,0.78)",
+      }}
+    >
+      {label}
+    </div>
+  );
+};
+
+const RegionBox = ({
+  left,
+  top,
+  width,
+  height,
+  opacity,
+}: {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+  opacity: number;
+}) => (
+  <div
+    style={{
+      position: "absolute",
+      left,
+      top,
+      width,
+      height,
+      border: `5px solid ${palette.green}`,
+      borderRadius: 10,
+      opacity,
+      boxShadow: "0 0 0 999px rgba(11,107,43,0.03)",
     }}
   />
 );
 
-const TitleScene = () => {
-  const frame = useCurrentFrame();
-  const opacity = fadeOpacity(frame, scene.title.duration, 14, 24);
-  const typed = "BrowserDelta";
-  const typedLength = count(frame, typed.length, 6, 42);
-  const cursorOn = Math.floor(frame / 12) % 2 === 0;
-  const cardIn = progress(frame, 46, 36);
-
-  return (
-    <Shell>
-      <AbsoluteFill
-        style={{
-          opacity,
-          transform: `translateY(${(1 - cardIn) * 18}px)`,
-          padding: "70px 88px",
-        }}
-      >
-        <div style={{position: "absolute", top: 84, right: 94}}>
-          <Pill>live MiniWoB eval</Pill>
-        </div>
-        <div style={{marginTop: 48}}>
-          <Eyebrow>semantic compaction for browser agents</Eyebrow>
-          <Headline size={118} maxWidth={1320}>
-            {typed.slice(0, typedLength)}
-            <span style={{color: colors.cyan}}>
-              {typedLength < typed.length && cursorOn ? "_" : ""}
-            </span>
-          </Headline>
-          <Subhead>
-            Same browser task. Same agent loop. Far less state sent back to the
-            model.
-          </Subhead>
-        </div>
-
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 36,
-            marginTop: 88,
-          }}
-        >
-          <IntroCard
-            accent={colors.blue}
-            title="Standard browser agent"
-            body="Every step can resend a screenshot or the whole page state. The model reasons over mostly repeated information."
-            delay={64}
-          />
-          <IntroCard
-            accent={colors.cyan}
-            title="BrowserDelta agent"
-            body="The browser stream is compressed into what changed, what matters, and when visual evidence is worth sending."
-            delay={78}
-          />
-        </div>
-        <div
-          style={{
-            position: "absolute",
-            left: 92,
-            bottom: 88,
-            fontFamily: font.display,
-            fontSize: 46,
-            color: colors.amber,
-          }}
-        >
-          {demoCase.task}
-          <div
-            style={{
-              marginTop: 8,
-              fontFamily: font.mono,
-              fontSize: 22,
-              color: colors.muted,
-            }}
-          >
-            demo target
-          </div>
-        </div>
-      </AbsoluteFill>
-    </Shell>
-  );
-};
-
-const IntroCard = ({
-  accent,
+const PipelineStep = ({
+  index,
   title,
   body,
-  delay,
+  active,
+  tone,
 }: {
-  accent: string;
+  index: string;
   title: string;
   body: string;
-  delay: number;
-}) => {
-  const frame = useCurrentFrame();
-  const enter = progress(frame, delay, 30);
-  return (
-    <Panel
-      style={{
-        height: 310,
-        padding: "36px 36px 36px 44px",
-        borderLeft: `8px solid ${accent}`,
-        opacity: enter,
-        transform: `translateY(${(1 - enter) * 28}px)`,
-      }}
-    >
-      <div
-        style={{
-          color: colors.text,
-          fontFamily: font.display,
-          fontSize: 36,
-          fontWeight: 520,
-        }}
-      >
-        {title}
-      </div>
-      <div
-        style={{
-          marginTop: 18,
-          maxWidth: 620,
-          color: colors.muted,
-          fontFamily: font.display,
-          fontSize: 31,
-          lineHeight: 1.18,
-        }}
-      >
-        {body}
-      </div>
-    </Panel>
-  );
-};
-
-const RaceScene = () => {
-  const frame = useCurrentFrame();
-  const opacity = fadeOpacity(frame, scene.race.duration, 18, 24);
-  const compactTokens = decimalCount(
-    frame,
-    benchmark.compact.avgTokens,
-    74,
-    96,
-    1,
-  );
-  const fullTokens = decimalCount(
-    frame,
-    benchmark.fullState.avgTokens,
-    74,
-    96,
-    1,
-  );
-
-  return (
-    <Shell>
-      <AbsoluteFill style={{opacity, padding: "70px 88px"}}>
-        <Eyebrow>same browser agent, different observation stream</Eyebrow>
-        <Headline size={76} maxWidth={1360}>
-          The expensive part is repeated context.
-        </Headline>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 38,
-            marginTop: 54,
-          }}
-        >
-          <RacePanel
-            mode="full_state"
-            accent={colors.blue}
-            title="Full page state"
-            subtitle="Every decision gets the heavy observation again."
-            tokenValue={fullTokens}
-            large
-          />
-          <RacePanel
-            mode="compact"
-            accent={colors.cyan}
-            title="Compact observation"
-            subtitle="Only the changed browser facts move forward."
-            tokenValue={compactTokens}
-          />
-        </div>
-        <div
-          style={{
-            position: "absolute",
-            bottom: 78,
-            left: 92,
-            display: "flex",
-            gap: 14,
-            alignItems: "center",
-          }}
-        >
-          <Pill color={colors.green}>
-            {decimalCount(frame, benchmark.tokenReductionPct, 128, 58, 1)}% fewer
-            decision tokens
-          </Pill>
-          <Pill dim>full 125-task MiniWoB run</Pill>
-        </div>
-      </AbsoluteFill>
-    </Shell>
-  );
-};
-
-const RacePanel = ({
-  mode,
-  accent,
-  title,
-  subtitle,
-  tokenValue,
-  large = false,
-}: {
-  mode: string;
-  accent: string;
-  title: string;
-  subtitle: string;
-  tokenValue: string;
-  large?: boolean;
-}) => {
-  const frame = useCurrentFrame();
-  const p = progress(frame, 30, 50);
-  const streamRows = Array.from({length: large ? 9 : 7}, (_, index) => index);
-
-  return (
-    <Panel
-      style={{
-        height: 655,
-        padding: 34,
-        borderColor: accent,
-        opacity: p,
-        transform: `translateY(${(1 - p) * 20}px)`,
-      }}
-    >
-      <div style={{display: "flex", justifyContent: "space-between", gap: 16}}>
-        <div>
-          <div
-            style={{
-              fontFamily: font.mono,
-              color: accent,
-              fontSize: 23,
-              marginBottom: 14,
-            }}
-          >
-            {mode}
-          </div>
-          <div
-            style={{
-              color: colors.text,
-              fontFamily: font.display,
-              fontSize: 43,
-              fontWeight: 540,
-            }}
-          >
-            {title}
-          </div>
-          <div
-            style={{
-              marginTop: 8,
-              color: colors.muted,
-              fontFamily: font.display,
-              fontSize: 25,
-            }}
-          >
-            {subtitle}
-          </div>
-        </div>
-        <div style={{textAlign: "right"}}>
-          <div
-            style={{
-              color: colors.text,
-              fontFamily: font.mono,
-              fontSize: 48,
-              lineHeight: 1,
-            }}
-          >
-            {tokenValue}
-          </div>
-          <div
-            style={{
-              marginTop: 8,
-              color: colors.muted,
-              fontFamily: font.mono,
-              fontSize: 20,
-            }}
-          >
-            avg tokens/task
-          </div>
-        </div>
-      </div>
-
-      <div
-        style={{
-          marginTop: 42,
-          display: "grid",
-          gridTemplateColumns: large ? "1fr" : "0.78fr",
-          gap: 12,
-        }}
-      >
-        {streamRows.map((row) => {
-          const rowP = progress(frame, 48 + row * 8, 24);
-          return (
-            <div
-              key={row}
-              style={{
-                opacity: rowP,
-                transform: `translateX(${(1 - rowP) * (large ? -28 : 28)}px)`,
-                border: `1px solid ${large ? colors.border : "rgba(57,215,207,0.55)"}`,
-                background: large
-                  ? "rgba(90,159,255,0.055)"
-                  : "rgba(57,215,207,0.075)",
-                height: large ? 42 : 36,
-                borderRadius: 12,
-                width: `${large ? 100 : 46 + row * 3}%`,
-                display: "flex",
-                alignItems: "center",
-                padding: "0 15px",
-                fontFamily: font.mono,
-                color: large ? colors.muted : colors.cyan,
-                fontSize: large ? 17 : 18,
-              }}
-            >
-              {large
-                ? `screenshot + DOM snapshot step ${row + 1}`
-                : row === 3
-                  ? "target_hint visible; likely_click_ref=28"
-                  : `delta step ${row + 1}: focused/tab/text changed`}
-            </div>
-          );
-        })}
-      </div>
-    </Panel>
-  );
-};
-
-const LoopScene = () => {
-  const frame = useCurrentFrame();
-  const opacity = fadeOpacity(frame, scene.loops.duration, 16, 24);
-  const split = progress(frame, 80, 60);
-  const loopScale = 0.94 + split * 0.04;
-
-  return (
-    <Shell>
-      <AbsoluteFill style={{opacity, padding: "70px 88px"}}>
-        <Eyebrow>the browser loop changes shape</Eyebrow>
-        <Headline size={72} maxWidth={1500}>
-          BrowserDelta replaces repeated full state with a browser diff.
-        </Headline>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "0.95fr 1.05fr",
-            gap: 34,
-            marginTop: 48,
-          }}
-        >
-          <ImageCard
-            title="Before"
-            caption="full state repeated"
-            src={assets.standardLoop}
-            accent={colors.blue}
-            opacity={1 - split * 0.28}
-            scale={0.96}
-          />
-          <ImageCard
-            title="After"
-            caption="diff first, visual only when needed"
-            src={assets.browserDeltaLoop}
-            accent={colors.cyan}
-            opacity={0.58 + split * 0.42}
-            scale={loopScale}
-          />
-        </div>
-      </AbsoluteFill>
-    </Shell>
-  );
-};
-
-const ImageCard = ({
-  title,
-  caption,
-  src,
-  accent,
-  opacity,
-  scale,
-}: {
-  title: string;
-  caption: string;
-  src: string;
-  accent: string;
-  opacity: number;
-  scale: number;
+  active: number;
+  tone: string;
 }) => (
-  <Panel
-    style={{
-      height: 660,
-      overflow: "hidden",
-      borderColor: accent,
-      opacity,
-      transform: `scale(${scale})`,
-    }}
-  >
-    <div
-      style={{
-        height: 88,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "0 28px",
-        borderBottom: `1px solid ${colors.border}`,
-      }}
-    >
-      <div style={{fontFamily: font.display, fontSize: 32, color: colors.text}}>
-        {title}
-      </div>
-      <div
-        style={{
-          fontFamily: font.mono,
-          color: accent,
-          fontSize: 19,
-          lineHeight: 1.15,
-          maxWidth: 470,
-          textAlign: "right",
-        }}
-      >
-        {caption}
-      </div>
-    </div>
-    <div style={{height: 572, padding: 18}}>
-      <AssetImage src={src} style={{objectFit: "contain"}} />
-    </div>
-  </Panel>
-);
-
-const VisualDeltaScene = () => {
-  const frame = useCurrentFrame();
-  const opacity = fadeOpacity(frame, scene.visual.duration, 16, 24);
-  const imageIn = progress(frame, 28, 38);
-  const chips = [
-    ["DOM/a11y diff first", colors.cyan],
-    ["visual regions only when needed", colors.amber],
-    ["crop fallback instead of full screenshot", colors.green],
-  ] as const;
-
-  return (
-    <Shell>
-      <AbsoluteFill style={{opacity, padding: "70px 88px"}}>
-        <Eyebrow>visual changes do not break the contract</Eyebrow>
-        <Headline size={76} maxWidth={1320}>
-          VisualDelta escalates only when pixels matter.
-        </Headline>
-        <div style={{display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: 42, marginTop: 48}}>
-          <Panel
-            style={{
-              height: 635,
-              overflow: "hidden",
-              opacity: imageIn,
-              transform: `translateX(${(1 - imageIn) * -28}px)`,
-              padding: 18,
-            }}
-          >
-            <AssetImage src={assets.visualDeltaPolicy} style={{objectFit: "contain"}} />
-          </Panel>
-          <div style={{display: "flex", flexDirection: "column", gap: 24, paddingTop: 34}}>
-            {chips.map(([label, color], index) => {
-              const itemIn = progress(frame, 70 + index * 28, 26);
-              return (
-                <Panel
-                  key={label}
-                  style={{
-                    padding: 30,
-                    borderColor: color,
-                    opacity: itemIn,
-                    transform: `translateX(${(1 - itemIn) * 36}px)`,
-                  }}
-                >
-                  <div
-                    style={{
-                      fontFamily: font.mono,
-                      color,
-                      fontSize: 24,
-                      marginBottom: 14,
-                    }}
-                  >
-                    0{index + 1}
-                  </div>
-                  <div
-                    style={{
-                      fontFamily: font.display,
-                      color: colors.text,
-                      fontSize: 40,
-                      lineHeight: 1.08,
-                    }}
-                  >
-                    {label}
-                  </div>
-                </Panel>
-              );
-            })}
-          </div>
-        </div>
-      </AbsoluteFill>
-    </Shell>
-  );
-};
-
-const DemoMomentScene = () => {
-  const frame = useCurrentFrame();
-  const opacity = fadeOpacity(frame, scene.demo.duration, 16, 28);
-  const screenshotIn = progress(frame, 28, 42);
-  const callout = progress(frame, 110, 34);
-  const refPulse = spring({
-    frame: Math.max(0, frame - 120),
-    fps: FPS,
-    config: {damping: 12, mass: 0.7, stiffness: 120},
-  });
-
-  return (
-    <Shell>
-      <AbsoluteFill style={{opacity, padding: "70px 88px"}}>
-        <Eyebrow>demo moment</Eyebrow>
-        <Headline size={70} maxWidth={1600}>
-          The target is found from text diff. No screenshot is sent.
-        </Headline>
-        <div
-          style={{
-            marginTop: 40,
-            display: "grid",
-            gridTemplateColumns: "1.25fr 0.75fr",
-            gap: 32,
-          }}
-        >
-          <Panel
-            style={{
-              height: 700,
-              overflow: "hidden",
-              opacity: screenshotIn,
-              transform: `scale(${0.96 + screenshotIn * 0.04})`,
-              padding: 16,
-            }}
-          >
-            <AssetImage src={assets.targetFound} style={{objectFit: "contain"}} />
-          </Panel>
-          <div style={{display: "flex", flexDirection: "column", gap: 24}}>
-            <Panel
-              style={{
-                padding: 34,
-                borderColor: colors.cyan,
-                opacity: callout,
-                transform: `translateY(${(1 - callout) * 24}px)`,
-              }}
-            >
-              <div
-                style={{
-                  fontFamily: font.mono,
-                  fontSize: 23,
-                  color: colors.cyan,
-                  marginBottom: 22,
-                }}
-              >
-                compact observation
-              </div>
-              <CodeLine color={colors.text}>target_hint="faucibus" visible</CodeLine>
-              <CodeLine color={colors.green}>
-                likely_click_ref={demoCase.targetRef}
-              </CodeLine>
-              <CodeLine color={colors.muted}>No image sent. Text diff only.</CodeLine>
-            </Panel>
-            <Panel
-              style={{
-                padding: 34,
-                borderColor: colors.green,
-                opacity: callout,
-              }}
-            >
-              <div style={{fontFamily: font.display, color: colors.text, fontSize: 34}}>
-                Compact run
-              </div>
-              <div
-                style={{
-                  marginTop: 14,
-                  color: colors.green,
-                  fontFamily: font.mono,
-                  fontSize: 62,
-                  transform: `scale(${1 + refPulse * 0.035})`,
-                  transformOrigin: "left center",
-                }}
-              >
-                solved {demoCase.compactResult}
-              </div>
-              <TokenRow label="compact" value={demoCase.compactTokens} color={colors.cyan} />
-              <TokenRow label="full_state" value={demoCase.fullStateTokens} color={colors.blue} />
-            </Panel>
-          </div>
-        </div>
-      </AbsoluteFill>
-    </Shell>
-  );
-};
-
-const CodeLine = ({children, color}: {children: React.ReactNode; color: string}) => (
   <div
     style={{
-      fontFamily: font.mono,
-      color,
-      fontSize: 29,
-      lineHeight: 1.42,
-      whiteSpace: "nowrap",
+      opacity: 0.25 + active * 0.75,
+      transform: `translateY(${(1 - active) * 18}px)`,
+      border: `1px solid ${active > 0.5 ? tone : palette.line}`,
+      borderRadius: 18,
+      padding: "22px 24px",
+      marginBottom: 18,
+      background: "rgba(255,255,255,0.78)",
     }}
   >
-    {children}
+    <div style={{display: "flex", gap: 18, alignItems: "center"}}>
+      <div
+        style={{
+          width: 50,
+          height: 50,
+          borderRadius: 999,
+          background: tone,
+          color: palette.paper2,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontFamily: font.mono,
+          fontSize: 23,
+          fontWeight: 800,
+        }}
+      >
+        {index}
+      </div>
+      <div style={{fontSize: 34, fontWeight: 640}}>{title}</div>
+    </div>
+    <div style={{marginTop: 12, color: palette.muted, fontSize: 24, lineHeight: 1.22}}>
+      {body}
+    </div>
   </div>
 );
 
-const TokenRow = ({
+const Gauge = ({
   label,
   value,
-  color,
+  active,
 }: {
   label: string;
-  value: number;
-  color: string;
+  value: string;
+  active: number;
+}) => (
+  <div
+    style={{
+      opacity: active,
+      border: `1px solid ${palette.cyan}`,
+      borderRadius: 18,
+      padding: "20px 22px",
+      background: "rgba(24,140,133,0.06)",
+    }}
+  >
+    <div style={{fontFamily: font.mono, color: palette.cyan, fontSize: 42, fontWeight: 800}}>
+      {value}
+    </div>
+    <div style={{fontSize: 19, color: palette.muted}}>{label}</div>
+  </div>
+);
+
+const RouteCard = ({
+  route,
+  index,
+  active,
+  x,
+  y,
+}: {
+  route: {name: string; tone: string; title: string; payload: string};
+  index: number;
+  active: boolean;
+  x: number;
+  y: number;
 }) => {
-  const max = demoCase.fullStateTokens;
+  const f = useCurrentFrame();
+  const appear = progress(f, frame(2.5 + index * 1.0), frame(0.8));
+  return (
+    <Panel
+      style={{
+        position: "absolute",
+        left: x,
+        top: y,
+        width: 438,
+        height: 196,
+        padding: 28,
+        borderColor: active ? route.tone : palette.line,
+        background: active ? "rgba(255,255,255,0.98)" : "rgba(255,255,255,0.70)",
+        opacity: appear,
+        transform: `translateY(${(1 - appear) * 24}px) scale(${active ? 1.035 : 1})`,
+      }}
+    >
+      <div style={{fontFamily: font.mono, fontSize: 27, color: route.tone, fontWeight: 800}}>
+        {route.name}
+      </div>
+      <div style={{marginTop: 12, fontSize: 28, fontWeight: 640}}>{route.title}</div>
+      <div
+        style={{
+          marginTop: 12,
+          fontFamily: font.mono,
+          color: palette.muted,
+          fontSize: 18,
+          lineHeight: 1.35,
+        }}
+      >
+        {route.payload}
+      </div>
+    </Panel>
+  );
+};
+
+const RouterLine = ({
+  x1,
+  y1,
+  x2,
+  y2,
+  active,
+}: {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  active: boolean;
+}) => {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const length = Math.sqrt(dx * dx + dy * dy);
+  const angle = Math.atan2(dy, dx) * (180 / Math.PI);
   return (
     <div
       style={{
-        display: "grid",
-        gridTemplateColumns: "140px 1fr 92px",
-        gap: 18,
-        alignItems: "center",
-        marginTop: 18,
+        position: "absolute",
+        left: x1,
+        top: y1,
+        width: length,
+        height: active ? 5 : 2,
+        background: active ? palette.green : palette.lineDark,
+        transform: `rotate(${angle}deg)`,
+        transformOrigin: "left center",
+        opacity: active ? 1 : 0.55,
+      }}
+    />
+  );
+};
+
+const BigStat = ({
+  value,
+  label,
+  tone,
+}: {
+  value: string;
+  label: string;
+  tone: "green" | "ink";
+}) => (
+  <div>
+    <div
+      style={{
         fontFamily: font.mono,
-        color: colors.muted,
-        fontSize: 20,
+        fontSize: 66,
+        lineHeight: 1,
+        fontWeight: 800,
+        color: tone === "green" ? palette.green : palette.ink,
       }}
     >
-      <div>{label}</div>
+      {value}
+    </div>
+    <div style={{marginTop: 12, fontSize: 24, color: palette.muted, lineHeight: 1.2}}>
+      {label}
+    </div>
+  </div>
+);
+
+const ChartTitle = ({title, subtitle}: {title: string; subtitle: string}) => (
+  <div style={{display: "flex", justifyContent: "space-between", alignItems: "baseline"}}>
+    <div style={{fontSize: 34, fontWeight: 650}}>{title}</div>
+    <div style={{fontFamily: font.mono, fontSize: 18, color: palette.muted}}>
+      {subtitle}
+    </div>
+  </div>
+);
+
+const Bar = ({
+  label,
+  value,
+  max,
+  suffix,
+  color,
+  progress: p,
+  note,
+}: {
+  label: string;
+  value: number;
+  max: number;
+  suffix: string;
+  color: string;
+  progress: number;
+  note: string;
+}) => {
+  const width = `${(value / max) * 100 * p}%`;
+  const digits = value < 100 ? 1 : 0;
+  return (
+    <div style={{marginTop: 22}}>
       <div
         style={{
-          height: 14,
+          display: "flex",
+          justifyContent: "space-between",
+          fontFamily: font.mono,
+          color: palette.muted,
+          fontSize: 19,
+        }}
+      >
+        <span>{label}</span>
+        <span>
+          {number(value, digits)}
+          {suffix} <span style={{color: palette.lineDark}}>{note}</span>
+        </span>
+      </div>
+      <div
+        style={{
+          marginTop: 8,
+          height: 26,
           borderRadius: 999,
-          background: "rgba(255,255,255,0.08)",
+          background: "#edf1e9",
           overflow: "hidden",
         }}
       >
         <div
           style={{
-            width: `${(value / max) * 100}%`,
+            width,
             height: "100%",
             borderRadius: 999,
             background: color,
           }}
         />
       </div>
-      <div style={{color}}>{value.toLocaleString("en-US")}</div>
     </div>
-  );
-};
-
-const BenchmarkScene = () => {
-  const frame = useCurrentFrame();
-  const opacity = fadeOpacity(frame, scene.benchmark.duration, 16, 26);
-  const statIn = progress(frame, 34, 42);
-  const reduction = decimalCount(
-    frame,
-    benchmark.tokenReductionPct,
-    80,
-    82,
-    1,
-  );
-
-  return (
-    <Shell>
-      <AbsoluteFill style={{opacity, padding: "70px 88px"}}>
-        <Eyebrow>external benchmark readout</Eyebrow>
-        <Headline size={72} maxWidth={1500}>
-          Near-parity success, roughly one-sixth the context.
-        </Headline>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "0.95fr 1.05fr",
-            gap: 36,
-            marginTop: 44,
-          }}
-        >
-          <Panel style={{height: 650, padding: 38}}>
-            <div style={{fontFamily: font.display, color: colors.text, fontSize: 36}}>
-              Task success
-            </div>
-            <div
-              style={{
-                marginTop: 10,
-                color: colors.muted,
-                fontFamily: font.display,
-                fontSize: 24,
-              }}
-            >
-              {benchmark.tasks} BrowserGym/MiniWoB tasks, LLM policy
-            </div>
-            <BarPair
-              frame={frame}
-              topLabel="BrowserDelta"
-              topValue={benchmark.compact.successes}
-              topMax={benchmark.tasks}
-              topColor={colors.green}
-              bottomLabel="full_state"
-              bottomValue={benchmark.fullState.successes}
-              bottomMax={benchmark.tasks}
-              bottomColor={colors.blue}
-              delay={76}
-              suffix={`/${benchmark.tasks}`}
-            />
-            <div
-              style={{
-                marginTop: 64,
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 18,
-              }}
-            >
-              <SmallStat label="same result" value={benchmark.sameResultTasks} color={colors.muted} />
-              <SmallStat
-                label="compact wins / regressions"
-                value={`+${benchmark.compactOnlyWins} / -${benchmark.compactRegressions}`}
-                color={colors.cyan}
-              />
-            </div>
-          </Panel>
-          <Panel style={{height: 650, padding: 38}}>
-            <div style={{fontFamily: font.display, color: colors.text, fontSize: 36}}>
-              Average decision tokens
-            </div>
-            <div
-              style={{
-                marginTop: 10,
-                color: colors.muted,
-                fontFamily: font.display,
-                fontSize: 24,
-              }}
-            >
-              Context sent to the model per task
-            </div>
-            <BarPair
-              frame={frame}
-              topLabel="BrowserDelta"
-              topValue={benchmark.compact.avgTokens}
-              topMax={benchmark.fullState.avgTokens}
-              topColor={colors.cyan}
-              bottomLabel="full_state"
-              bottomValue={benchmark.fullState.avgTokens}
-              bottomMax={benchmark.fullState.avgTokens}
-              bottomColor={colors.orange}
-              delay={88}
-              decimals
-            />
-            <div
-              style={{
-                opacity: statIn,
-                marginTop: 54,
-                fontFamily: font.display,
-                color: colors.green,
-                fontSize: 82,
-                lineHeight: 1,
-              }}
-            >
-              {reduction}% fewer tokens
-            </div>
-          </Panel>
-        </div>
-      </AbsoluteFill>
-    </Shell>
-  );
-};
-
-const BarPair = ({
-  frame,
-  topLabel,
-  topValue,
-  topMax,
-  topColor,
-  bottomLabel,
-  bottomValue,
-  bottomMax,
-  bottomColor,
-  delay,
-  suffix = "",
-  decimals = false,
-}: {
-  frame: number;
-  topLabel: string;
-  topValue: number;
-  topMax: number;
-  topColor: string;
-  bottomLabel: string;
-  bottomValue: number;
-  bottomMax: number;
-  bottomColor: string;
-  delay: number;
-  suffix?: string;
-  decimals?: boolean;
-}) => {
-  const topP = progress(frame, delay, 54);
-  const bottomP = progress(frame, delay + 16, 54);
-  return (
-    <div style={{marginTop: 86}}>
-      <MetricBar
-        label={topLabel}
-        value={topValue}
-        max={topMax}
-        color={topColor}
-        progressValue={topP}
-        suffix={suffix}
-        decimals={decimals}
-      />
-      <MetricBar
-        label={bottomLabel}
-        value={bottomValue}
-        max={bottomMax}
-        color={bottomColor}
-        progressValue={bottomP}
-        suffix={suffix}
-        decimals={decimals}
-      />
-    </div>
-  );
-};
-
-const MetricBar = ({
-  label,
-  value,
-  max,
-  color,
-  progressValue,
-  suffix,
-  decimals,
-}: {
-  label: string;
-  value: number;
-  max: number;
-  color: string;
-  progressValue: number;
-  suffix: string;
-  decimals: boolean;
-}) => (
-  <div style={{marginBottom: 44}}>
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        color: colors.text,
-        fontFamily: font.mono,
-        fontSize: 28,
-        marginBottom: 16,
-      }}
-    >
-      <span>{label}</span>
-      <span style={{color}}>
-        {decimals ? value.toFixed(1) : Math.round(value)}
-        {suffix}
-      </span>
-    </div>
-    <div
-      style={{
-        height: 42,
-        borderRadius: 999,
-        background: "rgba(255,255,255,0.08)",
-        overflow: "hidden",
-        border: `1px solid ${colors.border}`,
-      }}
-    >
-      <div
-        style={{
-          height: "100%",
-          width: `${(value / max) * progressValue * 100}%`,
-          borderRadius: 999,
-          background: color,
-        }}
-      />
-    </div>
-  </div>
-);
-
-const SmallStat = ({
-  label,
-  value,
-  color,
-}: {
-  label: string;
-  value: React.ReactNode;
-  color: string;
-}) => (
-  <div
-    style={{
-      borderTop: `1px solid ${colors.border}`,
-      paddingTop: 18,
-      fontFamily: font.display,
-    }}
-  >
-    <div style={{color: colors.muted, fontSize: 23}}>{label}</div>
-    <div style={{color, marginTop: 8, fontSize: 42}}>{value}</div>
-  </div>
-);
-
-const CloseScene = () => {
-  const frame = useCurrentFrame();
-  const opacity = fadeOpacity(frame, scene.close.duration, 18, 40);
-  const glow = spring({
-    frame,
-    fps: FPS,
-    config: {damping: 16, stiffness: 75, mass: 1},
-  });
-
-  return (
-    <Shell>
-      <AbsoluteFill
-        style={{
-          opacity,
-          padding: "70px 88px",
-          justifyContent: "center",
-          alignItems: "center",
-          textAlign: "center",
-        }}
-      >
-        <div
-          style={{
-            position: "absolute",
-            top: 218,
-            color: "rgba(57,215,207,0.10)",
-            fontFamily: font.mono,
-            fontSize: 220,
-            lineHeight: 1,
-            transform: `scale(${0.96 + glow * 0.04})`,
-          }}
-        >
-          84.0%
-        </div>
-        <div style={{position: "relative"}}>
-          <Eyebrow>BrowserDelta</Eyebrow>
-          <Headline size={104} maxWidth={1280}>
-            Less context. Same decisions.
-          </Headline>
-          <Subhead maxWidth={950}>
-            A compaction layer for browser agents that sends the browser diff
-            instead of resending the page.
-          </Subhead>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              gap: 14,
-              marginTop: 42,
-            }}
-          >
-            <Pill color={colors.green}>48/125 compact</Pill>
-            <Pill color={colors.blue}>50/125 full_state</Pill>
-            <Pill color={colors.cyan}>84.0% token reduction</Pill>
-          </div>
-        </div>
-      </AbsoluteFill>
-    </Shell>
-  );
-};
-
-export const BrowserDeltaDemo = () => {
-  return (
-    <AbsoluteFill style={{backgroundColor: colors.bg}}>
-      <Sequence from={scene.title.from} durationInFrames={scene.title.duration}>
-        <TitleScene />
-      </Sequence>
-      <Sequence from={scene.race.from} durationInFrames={scene.race.duration}>
-        <RaceScene />
-      </Sequence>
-      <Sequence from={scene.loops.from} durationInFrames={scene.loops.duration}>
-        <LoopScene />
-      </Sequence>
-      <Sequence from={scene.visual.from} durationInFrames={scene.visual.duration}>
-        <VisualDeltaScene />
-      </Sequence>
-      <Sequence from={scene.demo.from} durationInFrames={scene.demo.duration}>
-        <DemoMomentScene />
-      </Sequence>
-      <Sequence
-        from={scene.benchmark.from}
-        durationInFrames={scene.benchmark.duration}
-      >
-        <BenchmarkScene />
-      </Sequence>
-      <Sequence from={scene.close.from} durationInFrames={scene.close.duration}>
-        <CloseScene />
-      </Sequence>
-    </AbsoluteFill>
   );
 };

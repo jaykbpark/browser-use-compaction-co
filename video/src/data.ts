@@ -1,40 +1,64 @@
+export const transcript = {
+  durationSeconds: 208.604,
+  source: "video/work/jay-input/transcript/audio.tsv",
+};
+
 export const benchmark = {
-  tasks: 125,
+  tasksPerSeed: 125,
+  seeds: 5,
+  episodes: 625,
   compact: {
-    label: "BrowserDelta compact",
-    successes: 48,
-    successRate: 0.384,
-    avgTokens: 451.7,
+    label: "BrowserDelta",
+    successPct: 40.96,
+    successStdPct: 1.55,
+    avgTokens: 469.88,
+    avgTokensStd: 28.3,
   },
   fullState: {
-    label: "full_state baseline",
-    successes: 50,
-    successRate: 0.4,
-    avgTokens: 2828.4,
+    label: "full_state",
+    successPct: 43.52,
+    successStdPct: 1.93,
+    avgTokens: 2978.32,
+    avgTokensStd: 212.0,
   },
-  tokenReductionPct: 84.0,
-  sameResultTasks: 105,
-  compactOnlyWins: 5,
-  compactRegressions: 5,
-  runnerErrors: 10,
+  tokenReductionPct: 84.17,
+  tokenReductionStdPct: 1.16,
+  outcomeClasses: {
+    bothSuccess: 238,
+    compactOnlySuccess: 18,
+    compactRegression: 34,
+    bothFailed: 335,
+    runnerError: 0,
+  },
+  seedExample: {
+    compactSuccesses: 46,
+    fullStateSuccesses: 50,
+    tasks: 125,
+  },
+  source:
+    "reports/demo/miniwob-5seed-summary/summary.json",
+};
+
+export const internalDemo = {
+  nextActionPredictions: 12,
+  tokenSavingsPct: 76,
+  parityLabel: "matched full-state next-action baseline",
 };
 
 export const demoCase = {
   task: "find and click \"faucibus\"",
   env: "browsergym/miniwob.click-collapsible-2",
-  compactTokens: 1162,
-  fullStateTokens: 2662,
-  compactResult: "1/1",
-  fullStateResult: "0/1",
+  compactTokens: 857,
+  fullStateTokens: 2174,
   targetRef: "28",
 };
 
 export const assets = {
-  standardLoop: "assets/standard-loop.png",
-  browserDeltaLoop: "assets/browserdelta-loop.png",
-  visualDeltaPolicy: "assets/visualdelta-policy.png",
-  targetFound: "assets/demo-target-found.png",
-  viewerUi: "assets/viewer-ui.png",
-  compactObservation: "assets/compact-observation.png",
-  benchmark125: "assets/benchmark-125.png",
+  voiceover: "private/jay-voiceover.wav",
+  jayIntro: "private/jay-intro.mp4",
+  viewerFruitStart: "assets/app/viewer-fruit-step1.png",
+  viewerFruitDone: "assets/app/viewer-fruit-step4.png",
+  viewerCanvasCrop: "assets/app/viewer-canvas-step2.png",
+  viewerMiniwobTarget: "assets/app/viewer-miniwob-collapsible-step4.png",
+  codecReference: "assets/app/codec-reference.png",
 };

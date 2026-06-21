@@ -16,6 +16,8 @@ node_modules/
 viewer/dist/
 viewer/.vite/
 video/out/
+video/work/
+video/public/private/
 
 runs/*
 !runs/.gitkeep
