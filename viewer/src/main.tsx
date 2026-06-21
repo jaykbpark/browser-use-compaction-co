@@ -1,19 +1,8 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
-import {
-  AlertCircle,
-  ArrowRight,
-  CheckCircle2,
-  FileJson,
-  Gauge,
-  Image,
-  Loader2,
-} from "lucide-react";
 import "./styles.css";
 
-type RunSummary = {
-  runs: string[];
-};
+type RunSummary = { runs: string[] };
 
 type BrowserAction = {
   type: string;
@@ -24,73 +13,25 @@ type BrowserAction = {
   url?: string | null;
 };
 
-type StepPointer = {
-  screenshot: string;
-  state: string;
-};
+type StatePointer = { screenshot: string; state: string };
 
 type StepRecord = {
   step: number;
   action: BrowserAction;
-  result: {
-    ok: boolean;
-    message?: string;
-    error?: string | null;
-  };
-  before: StepPointer;
-  after: StepPointer;
+  result: { ok: boolean; message?: string; error?: string | null };
+  before?: StatePointer;
+  after?: StatePointer;
 };
 
-type InteractiveElement = {
-  ref: string;
-  role: string;
-  name?: string | null;
-  value?: string | null;
-  disabled?: boolean | null;
-};
-
-type PageState = {
-  url?: string;
-  title?: string | null;
-  text?: string[];
-  interactive?: InteractiveElement[];
-  focused_ref?: string | null;
-  console_errors?: string[];
-  network_errors?: string[];
-  screenshot?: string;
-};
-
-type StructuralChange = {
-  type: string;
-  detail: string;
-};
-
-type VisualRegion = {
-  kind: string;
-  area_pct: number;
-  element_ref?: string | null;
-  element_role?: string | null;
-  element_name?: string | null;
-  overlap_pct: number;
-};
+type Route = "text_only" | "crop_with_context" | "full_screenshot";
 
 type CompactObservation = {
   step: number;
-  action_result: string;
   summary: string;
-  changed: StructuralChange[];
-  visual_changed_pct: number;
-  visual_raw_changed_pct: number;
-  visual_ssim_score?: number | null;
-  visual_phash_distance?: number | null;
-  fallback: "none" | "crop" | "full_screenshot";
-  route: "text_only" | "crop_with_context" | "full_screenshot";
-  route_reason: string;
-  confidence: number;
+  route: Route;
   llm_observation: string;
   crop_paths: string[];
   full_screenshot_path?: string | null;
-  visual_regions: VisualRegion[];
   tokens_estimate: number;
   baseline_tokens_estimate: number;
   reduction_pct: number;
@@ -98,780 +39,403 @@ type CompactObservation = {
 
 type ReplayStepResult = {
   step: number;
-  context_mode: "compact" | "full_state" | "vision_full_state";
-  observation_summary: string;
   expected_next_action: BrowserAction;
   predicted_next_action: BrowserAction;
   passed: boolean;
-  match_reason: string;
   rationale: string;
-  confidence: number;
-  route: CompactObservation["route"];
-  fallback: CompactObservation["fallback"];
-  tokens_estimate: number;
-  baseline_tokens_estimate: number;
-  reduction_pct: number;
 };
 
 type ReplayReport = {
-  context_mode: "compact" | "full_state" | "vision_full_state";
   predictor: string;
   evaluated_steps: number;
   passed_steps: number;
-  next_action_accuracy: number;
-  compact_tokens: number;
-  baseline_tokens: number;
-  avg_reduction_pct: number;
   steps: ReplayStepResult[];
 };
 
-type EvalComparisonSummary = {
-  baseline_context_mode?: "compact" | "full_state" | "vision_full_state";
-  evaluated_steps: number;
-  compact_passed_steps: number;
-  baseline_passed_steps: number;
-  compact_accuracy: number;
-  baseline_accuracy: number;
-  accuracy_delta: number;
-  compact_tokens: number;
-  baseline_tokens: number;
-  token_savings: number;
-  token_reduction_pct: number;
-};
-
 type EvalComparisonReport = {
-  run_id: string;
-  predictor: string;
-  compact: ReplayReport;
-  baseline: ReplayReport;
-  summary: EvalComparisonSummary;
-  verdict: string;
-  explanation: string[];
+  compact?: ReplayReport;
+  baseline?: ReplayReport;
+  summary: {
+    evaluated_steps: number;
+    compact_passed_steps: number;
+    baseline_passed_steps: number;
+    compact_tokens: number;
+    baseline_tokens: number;
+    token_reduction_pct: number;
+  };
 };
 
 type RunDetail = {
   run_id: string;
-  manifest: {
-    start_url?: string;
-    mode?: string;
-  } | null;
   steps: StepRecord[];
   compact_observations: CompactObservation[];
   eval_report?: ReplayReport | null;
-  eval_full_state_report?: ReplayReport | null;
-  eval_vision_full_state_report?: ReplayReport | null;
   eval_comparison?: EvalComparisonReport | null;
 };
 
-type BusyAction = "compare" | null;
-
-const numberFormatter = new Intl.NumberFormat("en-US");
 const RUN_LABELS: Record<string, string> = {
   viewer_search_filter_smoke: "Fruit Finder replay",
+  viewer_visual_canvas_chart: "Visual Canvas Chart",
+  viewer_visual_progress_toast: "Visual Progress Toast",
+  viewer_visual_swatch_picker: "Visual Swatch Picker",
+  search_filter: "Fruit Finder replay",
+  visual_canvas_chart: "Visual Canvas Chart",
+  visual_progress_toast: "Visual Progress Toast",
+  visual_swatch_picker: "Visual Swatch Picker",
 };
+
+const DEMO_RUN_ORDER = [
+  "viewer_search_filter_smoke",
+  "viewer_visual_canvas_chart",
+  "viewer_visual_progress_toast",
+  "viewer_visual_swatch_picker",
+  "search_filter",
+  "visual_canvas_chart",
+  "visual_progress_toast",
+  "visual_swatch_picker",
+];
 
 function App() {
   const [runs, setRuns] = React.useState<string[]>([]);
   const [selectedRun, setSelectedRun] = React.useState("");
   const [detail, setDetail] = React.useState<RunDetail | null>(null);
-  const [benchmarkDetails, setBenchmarkDetails] = React.useState<RunDetail[]>([]);
   const [selectedStep, setSelectedStep] = React.useState(1);
   const [predictor, setPredictor] = React.useState<"heuristic" | "llm">("heuristic");
-  const [status, setStatus] = React.useState("loading");
-  const [busy, setBusy] = React.useState<BusyAction>(null);
+  const [status, setStatus] = React.useState<"loading" | "ready" | "offline">("loading");
   const [error, setError] = React.useState<string | null>(null);
-  const [afterState, setAfterState] = React.useState<PageState | null>(null);
-
-  const refreshRunList = React.useCallback(async () => {
-    setStatus("loading");
-    setError(null);
-    try {
-      const response = await fetch("/api/runs");
-      if (!response.ok) throw new Error(`Run index returned ${response.status}`);
-      const data = (await response.json()) as RunSummary;
-      const nextRuns = orderRuns(data.runs ?? []);
-      setRuns(nextRuns);
-      setSelectedRun((current) => (current && nextRuns.includes(current) ? current : nextRuns[0] ?? ""));
-      const loaded = await Promise.all(nextRuns.map((runId) => loadRunQuietly(runId)));
-      setBenchmarkDetails(loaded.filter((run): run is RunDetail => Boolean(run)));
-      setStatus("ready");
-    } catch (err) {
-      setRuns([]);
-      setBenchmarkDetails([]);
-      setStatus("api unavailable");
-      setError(errorMessage(err));
-    }
-  }, []);
+  const [busy, setBusy] = React.useState<string | null>(null);
+  const [toolsOpen, setToolsOpen] = React.useState(false);
 
   React.useEffect(() => {
-    void refreshRunList();
-  }, [refreshRunList]);
+    fetch("/api/runs")
+      .then((r) => r.json())
+      .then((data: RunSummary) => {
+        const next = orderRuns(data.runs ?? []);
+        setRuns(next);
+        setSelectedRun((cur) => (cur && next.includes(cur) ? cur : next[0] || ""));
+        setStatus("ready");
+        setError(null);
+      })
+      .catch((err) => {
+        setStatus("offline");
+        setError(messageFrom(err));
+      });
+  }, []);
 
   React.useEffect(() => {
     if (!selectedRun) {
       setDetail(null);
       return;
     }
-    const controller = new AbortController();
-    setStatus("loading run");
+    let cancelled = false;
+    setDetail(null);
     setError(null);
-    loadRun(selectedRun, controller.signal)
+    loadRun(selectedRun)
       .then((run) => {
+        if (cancelled) return;
         setDetail(run);
-        setSelectedStep((current) => clampStep(current, run));
-        setStatus("ready");
+        setSelectedStep(run.compact_observations[0]?.step ?? run.steps[0]?.step ?? 1);
       })
       .catch((err) => {
-        if (controller.signal.aborted) return;
-        setDetail(null);
-        setStatus("run unavailable");
-        setError(errorMessage(err));
+        if (cancelled) return;
+        setStatus("offline");
+        setError(messageFrom(err));
       });
-    return () => controller.abort();
+    return () => {
+      cancelled = true;
+    };
   }, [selectedRun]);
 
-  const selectedRawStep = detail?.steps.find((step) => step.step === selectedStep) ?? null;
-  const observation =
-    detail?.compact_observations.find((item) => item.step === selectedStep) ?? null;
-  const comparison = detail?.eval_comparison ?? null;
-  const compactStep = findReplayStep(
-    comparison?.compact ?? detail?.eval_report,
-    selectedStep,
-  );
-  const baselineReport =
-    comparison?.baseline ??
-    detail?.eval_vision_full_state_report ??
-    detail?.eval_full_state_report ??
-    null;
-  const baselineStep = findReplayStep(baselineReport, selectedStep);
-
-  React.useEffect(() => {
-    if (!selectedRun || !selectedRawStep) {
-      setAfterState(null);
-      return;
-    }
-    const controller = new AbortController();
-    fetch(runFileUrl(selectedRun, selectedRawStep.after.state), { signal: controller.signal })
-      .then((response) => {
-        if (!response.ok) throw new Error(`State returned ${response.status}`);
-        return response.json();
-      })
-      .then((state) => setAfterState(state as PageState))
-      .catch(() => {
-        if (!controller.signal.aborted) setAfterState(null);
-      });
-    return () => controller.abort();
-  }, [selectedRun, selectedRawStep]);
-
-  const summary = buildSummary(detail);
-  const compactTokens = compactStep?.tokens_estimate ?? summary.compactTokens;
-  const baselineTokens = baselineStep?.tokens_estimate ?? summary.baselineTokens;
-  const stepSavings = tokenReductionPct(baselineTokens, compactTokens);
-  const currentAction = selectedRawStep?.action ?? null;
-  const nextAction = compactStep?.predicted_next_action ?? baselineStep?.predicted_next_action ?? null;
-
-  async function refreshSelectedRun() {
+  async function run(label: string, url: string) {
     if (!selectedRun) return;
-    const run = await loadRun(selectedRun);
-    setDetail(run);
-    setBenchmarkDetails((current) =>
-      current.map((item) => (item.run_id === selectedRun ? run : item)),
-    );
-  }
-
-  async function runAction(kind: BusyAction, request: () => Promise<Response>) {
-    if (!kind) return;
-    setBusy(kind);
+    setBusy(label);
     setError(null);
     try {
-      const response = await request();
+      const response = await fetch(url, { method: "POST" });
       if (!response.ok) throw new Error((await response.text()) || response.statusText);
-      await refreshSelectedRun();
+      setDetail(await loadRun(selectedRun));
       setStatus("ready");
     } catch (err) {
-      setError(errorMessage(err));
-      setStatus("action failed");
+      setError(messageFrom(err));
     } finally {
       setBusy(null);
     }
   }
 
+  const enc = encodeURIComponent;
+  const compact = () => run("compact", `/api/runs/${enc(selectedRun)}/compact`);
+  const evaluate = () =>
+    run("evaluate", `/api/runs/${enc(selectedRun)}/eval?predictor=${enc(predictor)}`);
+  const compare = () =>
+    run(
+      "compare",
+      `/api/runs/${enc(selectedRun)}/eval/compare?predictor=${enc(predictor)}&baseline_context_mode=vision_full_state`,
+    );
+
+  const activeDetail = detail?.run_id === selectedRun ? detail : null;
+  const observations = activeDetail?.compact_observations ?? [];
+  const compactReport = activeDetail?.eval_comparison?.compact ?? activeDetail?.eval_report ?? null;
+  const totals = summarize(activeDetail);
+  const current = observations.find((o) => o.step === selectedStep) ?? observations[0] ?? null;
+  const currentRaw = activeDetail?.steps.find((s) => s.step === current?.step) ?? null;
+  const currentReplay = compactReport?.steps.find((s) => s.step === current?.step) ?? null;
+  const hasEval = totals.matched !== null && totals.total !== null;
+
   return (
-    <main className="app-shell">
-      <header className="hero">
-        <div>
-          <p className="eyebrow">Replay evaluator</p>
-          <h1>BrowserDelta replay</h1>
+    <main className="page">
+      <header className="bar">
+        <div className="wordmark">
+          BrowserDelta <span>· less context per step, same decisions</span>
+        </div>
+        <div className="bar-right">
+          {runs.length > 0 ? (
+            <label className="run-switch">
+              Run
+              <select
+                data-testid="run-select"
+                value={selectedRun}
+                onChange={(e) => setSelectedRun(e.target.value)}
+              >
+                {runs.map((r) => (
+                  <option key={r} value={r}>
+                    {formatRunLabel(r)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+          <div className="tools">
+            <button className="ghost" onClick={() => setToolsOpen((v) => !v)} disabled={!selectedRun}>
+              Recompute {toolsOpen ? "▴" : "▾"}
+            </button>
+            {toolsOpen ? (
+              <div className="tools-pop" onMouseLeave={() => setToolsOpen(false)}>
+                <label>
+                  Predictor
+                  <select
+                    value={predictor}
+                    onChange={(e) => setPredictor(e.target.value as "heuristic" | "llm")}
+                  >
+                    <option value="heuristic">heuristic</option>
+                    <option value="llm">llm</option>
+                  </select>
+                </label>
+                <button onClick={compact} disabled={!!busy}>
+                  {busy === "compact" ? "Compacting..." : "Compact run"}
+                </button>
+                <button onClick={evaluate} disabled={!!busy}>
+                  {busy === "evaluate" ? "Checking..." : "Check next moves"}
+                </button>
+                <button onClick={compare} disabled={!!busy}>
+                  {busy === "compare" ? "Comparing..." : "Compare to screenshots"}
+                </button>
+              </div>
+            ) : null}
+          </div>
         </div>
       </header>
 
-      <section className="controls" aria-label="Replay setup">
-        <label>
-          <span>Recorded task</span>
-          <select value={selectedRun} onChange={(event) => setSelectedRun(event.target.value)}>
-            {runs.map((run) => (
-              <option key={run} value={run}>
-                {formatRunLabel(run)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          <span>Scoring method</span>
-          <select
-            value={predictor}
-            onChange={(event) => setPredictor(event.target.value as "heuristic" | "llm")}
-          >
-            <option value="heuristic">Rule-based check</option>
-            <option value="llm">LLM check</option>
-          </select>
-        </label>
-        <div className="control-actions">
-          <button
-            type="button"
-            onClick={() =>
-              void runAction("compare", () =>
-                fetch(
-                  `/api/runs/${encodeURIComponent(
-                    selectedRun,
-                  )}/eval/compare?predictor=${encodeURIComponent(predictor)}`,
-                  { method: "POST" },
-                ),
-              )
-            }
-            disabled={!selectedRun || busy !== null}
-          >
-            {busy === "compare" ? <Loader2 className="spin" size={16} /> : <Gauge size={16} />}
-            Run side-by-side eval
-          </button>
-        </div>
-      </section>
+      {observations.length ? (
+        <section className="hero">
+          <h1>Same decisions, far less context.</h1>
+          <div className="hero-stats">
+            <div className="metric">
+              <span className="num good">{totals.reductionPct.toFixed(0)}%</span>
+              <span className="cap">
+                fewer tokens
+                <i>
+                  {totals.compactTokens.toLocaleString()} vs {totals.baselineTokens.toLocaleString()}
+                </i>
+              </span>
+            </div>
+            <span className="divider" />
+            <div className="metric">
+              <span className="num">{hasEval ? `${totals.matched}/${totals.total}` : "—"}</span>
+              <span className="cap">
+                moves match screenshots
+                <i>
+                  {hasEval
+                    ? totals.baselineMatched !== null
+                      ? `baseline ${totals.baselineMatched}/${totals.total}`
+                      : "next action verified"
+                    : "run a check to verify"}
+                </i>
+              </span>
+            </div>
+          </div>
+        </section>
+      ) : (
+        <p className="hint">
+          {status === "offline"
+            ? error || "Can't reach the API. Start the backend and reload."
+            : "Pick a run and Recompute > Compact to see how much page context is removed."}
+        </p>
+      )}
 
-      <StatusLine status={status} error={error} detail={detail} />
-
-      {detail ? (
-        <>
-          <section className="step-strip" aria-label="Recorded steps">
-            {detail.steps.map((step) => {
-              const result = findReplayStep(comparison?.compact ?? detail.eval_report, step.step);
-              const selected = step.step === selectedStep;
+      {observations.length ? (
+        <div className="layout">
+          <nav className="steps">
+            {observations.map((o) => {
+              const raw = activeDetail?.steps.find((s) => s.step === o.step);
+              const replay = compactReport?.steps.find((s) => s.step === o.step);
               return (
                 <button
-                  key={step.step}
-                  type="button"
-                  className={selected ? "step-pill selected" : "step-pill"}
-                  onClick={() => setSelectedStep(step.step)}
+                  key={o.step}
+                  className="step"
+                  data-step={o.step}
+                  data-on={o.step === current?.step}
+                  onClick={() => setSelectedStep(o.step)}
                 >
-                  <span>{step.step}</span>
-                  <strong>{formatAction(step.action)}</strong>
-                  <small>
-                    {result ? `${formatPct(result.reduction_pct)} saved` : "recorded action"}
-                  </small>
+                  <span className="step-top">
+                    <span className="step-n">Step {o.step}</span>
+                    <Mark replay={replay} />
+                  </span>
+                  <span className="step-act">{describeAction(raw?.action)}</span>
+                  <span className="step-save">−{Math.round(o.reduction_pct)}% tokens</span>
                 </button>
               );
             })}
+          </nav>
+
+          <section className="stage">
+            {current ? (
+              <StepView
+                runId={selectedRun}
+                obs={current}
+                raw={currentRaw}
+                replay={currentReplay}
+              />
+            ) : null}
           </section>
-
-          <section className="story-grid">
-            <BrowserFrame
-              runId={selectedRun}
-              step={selectedRawStep}
-              observation={observation}
-              afterState={afterState}
-            />
-
-            <div className="comparison-panel">
-              <div className="section-heading">
-                <p className="eyebrow">Step {selectedStep}</p>
-                <h2>
-                  {currentAction ? formatAction(currentAction) : "Select a step"}
-                  {nextAction ? (
-                    <>
-                      <ArrowRight size={18} />
-                      {formatAction(nextAction)}
-                    </>
-                  ) : null}
-                </h2>
-              </div>
-
-              <div className="payload-grid">
-                <PayloadCard
-                  kind="full"
-                  title="Non-compact context"
-                  subtitle={baselineLabel(baselineReport?.context_mode)}
-                  tokens={baselineTokens}
-                  step={baselineStep}
-                >
-                  <FullStateSummary state={afterState} step={selectedRawStep} runId={selectedRun} />
-                </PayloadCard>
-
-                <PayloadCard
-                  kind="compact"
-                  title="BrowserDelta context"
-                  subtitle={observation?.route.replaceAll("_", " ") ?? "compact delta"}
-                  tokens={compactTokens}
-                  savings={stepSavings}
-                  step={compactStep}
-                >
-                  <CompactSummary observation={observation} runId={selectedRun} />
-                </PayloadCard>
-              </div>
-            </div>
-          </section>
-
-          <section className="detail-row">
-            <TokenLedger compactTokens={compactTokens} baselineTokens={baselineTokens} />
-            <BenchmarkSummary runs={benchmarkDetails} />
-          </section>
-        </>
-      ) : (
-        <EmptyState status={status} />
-      )}
+        </div>
+      ) : null}
     </main>
   );
 }
 
-function StatusLine({
-  status,
-  error,
-  detail,
-}: {
-  status: string;
-  error: string | null;
-  detail: RunDetail | null;
-}) {
-  return (
-    <div className={error ? "status-line error" : "status-line"}>
-      {error ? <AlertCircle size={16} /> : <CheckCircle2 size={16} />}
-      <span>{error ? error : `${status}${detail ? ` · ${formatRunLabel(detail.run_id)}` : ""}`}</span>
-    </div>
-  );
-}
-
-function BrowserFrame({
+function StepView({
   runId,
-  step,
-  observation,
-  afterState,
+  obs,
+  raw,
+  replay,
 }: {
   runId: string;
-  step: StepRecord | null;
-  observation: CompactObservation | null;
-  afterState: PageState | null;
+  obs: CompactObservation;
+  raw: StepRecord | null;
+  replay: ReplayStepResult | null;
 }) {
-  if (!step) {
-    return (
-      <section className="browser-panel">
-        <EmptyState status="No step selected" />
-      </section>
-    );
-  }
+  const screenshot = raw?.after?.screenshot ?? null;
+  const crops = compactEvidencePaths(obs);
 
   return (
-    <section className="browser-panel">
-      <div className="browser-header">
-        <div>
-          <p className="eyebrow">Recorded browser state</p>
-          <h2>{afterState?.title || "Browser after action"}</h2>
-        </div>
-        <span>{observation ? `${formatPct(observation.visual_changed_pct)} visual change` : ""}</span>
-      </div>
-      <div className="browser-window">
-        <div className="window-bar">
-          <span />
-          <span />
-          <span />
-          <strong>{formatAction(step.action)}</strong>
-        </div>
-        <img
-          src={runFileUrl(runId, step.after.screenshot)}
-          alt={`Browser after step ${step.step}`}
-        />
-      </div>
-      <div className="screenshot-pair" aria-label="Before and after screenshots">
-        <EvidenceThumb
-          label="Before"
-          src={runFileUrl(runId, step.before.screenshot)}
-          alt={`Browser before step ${step.step}`}
-        />
-        <EvidenceThumb
-          label="After"
-          src={runFileUrl(runId, step.after.screenshot)}
-          alt={`Browser after step ${step.step}`}
-        />
-      </div>
-      <p className="browser-caption">
-        {observation?.summary ?? "The recorded page state after this browser action."}
-      </p>
-    </section>
-  );
-}
-
-function PayloadCard({
-  kind,
-  title,
-  subtitle,
-  tokens,
-  savings,
-  step,
-  children,
-}: {
-  kind: "full" | "compact";
-  title: string;
-  subtitle: string;
-  tokens: number;
-  savings?: number;
-  step: ReplayStepResult | null;
-  children: React.ReactNode;
-}) {
-  return (
-    <article className={`payload-card ${kind}`}>
-      <div className="payload-header">
-        <div>
-          <p className="eyebrow">{subtitle}</p>
-          <h3>{title}</h3>
-        </div>
-        <div className="token-badge">
-          <strong>{numberFormatter.format(tokens)}</strong>
-          <span>tokens</span>
-        </div>
-      </div>
-
-      {children}
-
-      <div className={step?.passed ? "prediction pass" : "prediction"}>
-        <span>Predicted next action</span>
-        <strong>{step ? formatAction(step.predicted_next_action) : "not evaluated"}</strong>
-        <small>
-          {step
-            ? `${step.passed ? "pass" : "miss"} · ${formatPct(step.confidence * 100)} confidence`
-            : "run the side-by-side eval to score this step"}
-        </small>
-      </div>
-
-      {typeof savings === "number" ? (
-        <div className="savings-bar" aria-label={`${formatPct(savings)} token savings`}>
-          <span style={{ width: `${Math.min(100, Math.max(0, savings))}%` }} />
-        </div>
-      ) : null}
-    </article>
-  );
-}
-
-function FullStateSummary({
-  state,
-  step,
-  runId,
-}: {
-  state: PageState | null;
-  step: StepRecord | null;
-  runId: string;
-}) {
-  const textCount = state?.text?.length ?? 0;
-  const interactiveCount = state?.interactive?.length ?? 0;
-  return (
-    <div className="payload-body">
-      {step ? (
-        <div className="evidence-grid two-up">
-          <EvidenceThumb
-            label="Before screenshot"
-            src={runFileUrl(runId, step.before.screenshot)}
-            alt={`Full state before step ${step.step}`}
-          />
-          <EvidenceThumb
-            label="After screenshot"
-            src={runFileUrl(runId, step.after.screenshot)}
-            alt={`Full state after step ${step.step}`}
-          />
-        </div>
-      ) : null}
-      <div className="summary-list">
-        <SummaryItem icon={<Image />} label="Screenshot" value={step?.after.screenshot ?? "missing"} />
-        <SummaryItem icon={<FileJson />} label="Page state" value={step?.after.state ?? "missing"} />
-        <SummaryItem label="Visible text nodes" value={String(textCount)} />
-        <SummaryItem label="Interactive elements" value={String(interactiveCount)} />
-      </div>
-      <details>
-        <summary>Show full-state contents</summary>
-        <div className="detail-columns">
-          <div>
-            <strong>Visible text</strong>
-            <ul>
-              {(state?.text ?? []).slice(0, 8).map((text, index) => (
-                <li key={`${text}-${index}`}>{text}</li>
-              ))}
-            </ul>
+    <>
+      <div className="compare">
+        <article className="pane">
+          <header>
+            <span className="pane-title">Full screenshot</span>
+            <span className="pane-cost">{obs.baseline_tokens_estimate.toLocaleString()} tokens</span>
+          </header>
+          <div className="pane-body shot">
+            {screenshot ? (
+              <img src={fileUrl(runId, screenshot)} alt={`Step ${obs.step}`} loading="lazy" />
+            ) : (
+              <p className="muted">No screenshot recorded.</p>
+            )}
           </div>
-          <div>
-            <strong>Interactive</strong>
-            <ul>
-              {(state?.interactive ?? []).slice(0, 8).map((item) => (
-                <li key={item.ref}>
-                  {item.ref} · {item.role} · {item.name || item.value || "unnamed"}
-                </li>
-              ))}
-            </ul>
+        </article>
+
+        <article className="pane">
+          <header>
+            <span className="pane-title">BrowserDelta</span>
+            <span className="pane-cost good">
+              {obs.tokens_estimate.toLocaleString()} tokens · −{Math.round(obs.reduction_pct)}%
+            </span>
+          </header>
+          <div className="pane-body">
+            <pre className="obs">{obs.llm_observation}</pre>
+            {crops.length ? (
+              <div className="crops">
+                <span className="muted">
+                  + {crops.length} visual artifact{crops.length > 1 ? "s" : ""} sent
+                </span>
+                <div className="crop-row">
+                  {crops.map((c) => (
+                    <img key={c} src={fileUrl(runId, c)} alt="changed region" loading="lazy" />
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="muted no-image">No image sent. Text diff only.</p>
+            )}
           </div>
-        </div>
-        {step ? (
-          <a href={runFileUrl(runId, step.after.state)} target="_blank" rel="noreferrer">
-            Open raw state JSON
-          </a>
-        ) : null}
-      </details>
-    </div>
-  );
-}
-
-function CompactSummary({
-  observation,
-  runId,
-}: {
-  observation: CompactObservation | null;
-  runId: string;
-}) {
-  if (!observation) {
-    return <p className="muted">Run compaction to create a delta for this step.</p>;
-  }
-
-  const visibleChanges = observation.changed.slice(0, 4);
-  const evidencePaths = compactEvidencePaths(observation);
-  return (
-    <div className="payload-body">
-      <p className="plain-delta">{observation.summary}</p>
-      {evidencePaths.length ? (
-        <div className="evidence-grid">
-          {evidencePaths.map((path, index) => (
-            <EvidenceThumb
-              key={`${path}-${index}`}
-              label={path === observation.full_screenshot_path ? "Full screenshot" : `Crop ${index + 1}`}
-              src={runFileUrl(runId, path)}
-              alt={`Compact visual evidence ${index + 1}`}
-            />
-          ))}
-        </div>
-      ) : null}
-      <div className="summary-list compact-list">
-        <SummaryItem label="Route" value={observation.route.replaceAll("_", " ")} />
-        <SummaryItem label="Fallback" value={observation.fallback} />
-        <SummaryItem label="Confidence" value={formatPct(observation.confidence * 100)} />
-        <SummaryItem label="Visual regions" value={String(observation.visual_regions.length)} />
+        </article>
       </div>
-      {visibleChanges.length ? (
-        <ul className="change-list">
-          {visibleChanges.map((change, index) => (
-            <li key={`${change.type}-${index}`}>
-              <span>{change.type.replaceAll("_", " ")}</span>
-              {change.detail}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      <details>
-        <summary>Show raw compact prompt payload</summary>
-        <pre>{observation.llm_observation}</pre>
-      </details>
-    </div>
+
+      <div className="outcome">
+        <span className="outcome-label">Next move</span>
+        <strong className="outcome-move">{describeAction(replay?.expected_next_action ?? raw?.action)}</strong>
+        {replay ? (
+          <span className={`outcome-result ${replay.passed ? "pass" : "fail"}`}>
+            {replay.passed ? "agent agreed" : "agent differed"}
+          </span>
+        ) : (
+          <span className="muted outcome-result">not checked</span>
+        )}
+      </div>
+    </>
   );
 }
 
-function EvidenceThumb({
-  label,
-  src,
-  alt,
-}: {
-  label: string;
-  src: string;
-  alt: string;
-}) {
+function Mark({ replay }: { replay?: ReplayStepResult }) {
+  if (!replay) return <span className="mark none" title="not checked" />;
   return (
-    <figure className="evidence-thumb">
-      <img src={src} alt={alt} loading="lazy" />
-      <figcaption>{label}</figcaption>
-    </figure>
+    <span className={`mark ${replay.passed ? "pass" : "fail"}`} title={replay.passed ? "agreed" : "differed"}>
+      {replay.passed ? "✓" : "✗"}
+    </span>
   );
 }
 
-function SummaryItem({
-  icon,
-  label,
-  value,
-}: {
-  icon?: React.ReactNode;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="summary-item">
-      {icon ? <span>{icon}</span> : null}
-      <small>{label}</small>
-      <strong>{value}</strong>
-    </div>
-  );
-}
-
-function TokenLedger({
-  compactTokens,
-  baselineTokens,
-}: {
+type Totals = {
   compactTokens: number;
   baselineTokens: number;
-}) {
-  const saved = Math.max(0, baselineTokens - compactTokens);
-  const pct = tokenReductionPct(baselineTokens, compactTokens);
-  return (
-    <section className="mini-panel">
-      <p className="eyebrow">Payload size</p>
-      <h2>{numberFormatter.format(saved)} tokens removed from this step.</h2>
-      <div className="ledger-row">
-        <span>Compact</span>
-        <strong>{numberFormatter.format(compactTokens)}</strong>
-      </div>
-      <div className="ledger-row">
-        <span>Non-compact</span>
-        <strong>{numberFormatter.format(baselineTokens)}</strong>
-      </div>
-      <div className="savings-bar large">
-        <span style={{ width: `${Math.min(100, Math.max(0, pct))}%` }} />
-      </div>
-      <p className="muted">{formatPct(pct)} reduction for the selected step.</p>
-    </section>
-  );
-}
+  reductionPct: number;
+  matched: number | null;
+  total: number | null;
+  baselineMatched: number | null;
+};
 
-function BenchmarkSummary({ runs }: { runs: RunDetail[] }) {
-  const rows = runs
-    .map((run) => run.eval_comparison)
-    .filter((comparison): comparison is EvalComparisonReport => Boolean(comparison));
-  const totals = rows.reduce(
-    (acc, report) => {
-      acc.evaluated += report.summary.evaluated_steps;
-      acc.compact += report.summary.compact_passed_steps;
-      acc.baseline += report.summary.baseline_passed_steps;
-      acc.compactTokens += report.summary.compact_tokens;
-      acc.baselineTokens += report.summary.baseline_tokens;
-      return acc;
-    },
-    { evaluated: 0, compact: 0, baseline: 0, compactTokens: 0, baselineTokens: 0 },
-  );
-  const reduction = tokenReductionPct(totals.baselineTokens, totals.compactTokens);
+function summarize(detail: RunDetail | null): Totals {
+  const obs = detail?.compact_observations ?? [];
+  const cmp = detail?.eval_comparison?.summary;
+  const rep = detail?.eval_report;
 
-  return (
-    <section className="mini-panel">
-      <p className="eyebrow">Saved eval output</p>
-      <h2>
-        {totals.evaluated} recorded steps compared
-      </h2>
-      <p className="muted">
-        Compact passed {totals.compact}/{totals.evaluated}; full-state passed {totals.baseline}/
-        {totals.evaluated}; compact payload saved {formatPct(reduction)}.
-      </p>
-      <div className="run-table">
-        {rows.slice(0, 4).map((report) => (
-          <div key={report.run_id}>
-            <strong>{formatRunLabel(report.run_id)}</strong>
-            <span>
-              compact {report.summary.compact_passed_steps}/{report.summary.evaluated_steps} · full{" "}
-              {report.summary.baseline_passed_steps}/{report.summary.evaluated_steps} ·{" "}
-              {formatPct(report.summary.token_reduction_pct)} saved
-            </span>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function EmptyState({ status }: { status: string }) {
-  return (
-    <section className="empty-state">
-      <h2>No run loaded</h2>
-      <p>{status}. Record or compact a run, then refresh this viewer.</p>
-    </section>
-  );
-}
-
-async function loadRun(runId: string, signal?: AbortSignal): Promise<RunDetail> {
-  const response = await fetch(`/api/runs/${encodeURIComponent(runId)}`, { signal });
-  if (!response.ok) throw new Error(`Run ${runId} returned ${response.status}`);
-  return (await response.json()) as RunDetail;
-}
-
-async function loadRunQuietly(runId: string): Promise<RunDetail | null> {
-  try {
-    return await loadRun(runId);
-  } catch {
-    return null;
-  }
-}
-
-function buildSummary(detail: RunDetail | null) {
-  const comparison = detail?.eval_comparison;
-  if (comparison) {
-    return {
-      evaluated: comparison.summary.evaluated_steps,
-      compactPassed: comparison.summary.compact_passed_steps,
-      baselinePassed: comparison.summary.baseline_passed_steps,
-      compactTokens: comparison.summary.compact_tokens,
-      baselineTokens: comparison.summary.baseline_tokens,
-      tokenReductionPct: comparison.summary.token_reduction_pct,
-    };
+  let compactTokens: number;
+  let baselineTokens: number;
+  let reductionPct: number;
+  if (cmp) {
+    compactTokens = cmp.compact_tokens;
+    baselineTokens = cmp.baseline_tokens;
+    reductionPct = cmp.token_reduction_pct;
+  } else {
+    compactTokens = obs.reduce((a, o) => a + o.tokens_estimate, 0);
+    baselineTokens = obs.reduce((a, o) => a + o.baseline_tokens_estimate, 0);
+    reductionPct = baselineTokens ? (1 - compactTokens / baselineTokens) * 100 : 0;
   }
 
-  const report = detail?.eval_report;
-  const compactTokens =
-    report?.compact_tokens ??
-    detail?.compact_observations.reduce((total, item) => total + item.tokens_estimate, 0) ??
-    0;
-  const baselineTokens =
-    report?.baseline_tokens ??
-    detail?.compact_observations.reduce((total, item) => total + item.baseline_tokens_estimate, 0) ??
-    0;
   return {
-    evaluated: report?.evaluated_steps ?? Math.max(0, (detail?.steps.length ?? 1) - 1),
-    compactPassed: report?.passed_steps ?? 0,
-    baselinePassed: 0,
     compactTokens,
     baselineTokens,
-    tokenReductionPct: tokenReductionPct(baselineTokens, compactTokens),
+    reductionPct,
+    matched: cmp?.compact_passed_steps ?? rep?.passed_steps ?? null,
+    total: cmp?.evaluated_steps ?? rep?.evaluated_steps ?? null,
+    baselineMatched: cmp?.baseline_passed_steps ?? null,
   };
 }
 
-function findReplayStep(report: ReplayReport | null | undefined, step: number) {
-  return report?.steps.find((item) => item.step === step) ?? null;
-}
-
-function clampStep(step: number, run: RunDetail) {
-  const validSteps = run.steps.map((item) => item.step);
-  if (validSteps.includes(step)) return step;
-  return validSteps[0] ?? 1;
-}
-
-function baselineLabel(mode?: ReplayReport["context_mode"]) {
-  if (mode === "vision_full_state") return "screenshot plus full page state";
-  if (mode === "full_state") return "full page state";
-  return "full browser payload";
-}
-
-function formatAction(action: BrowserAction | null | undefined): string {
-  if (!action) return "not available";
-  if (action.type === "type") {
-    const text = action.text ? ` "${action.text}"` : "";
-    return `type ${action.target || "field"}${text}`;
-  }
-  if (action.type === "click") return `click ${action.target || "target"}`;
-  if (action.type === "press") return `press ${action.key || action.target || "key"}`;
-  if (action.type === "goto") return `open ${action.url || action.target || "url"}`;
-  return action.type;
-}
-
-function tokenReductionPct(baseline: number, compact: number) {
-  if (!baseline) return 0;
-  return Math.max(0, ((baseline - compact) / baseline) * 100);
-}
-
-function formatPct(value: number) {
-  return `${Number.isFinite(value) ? value.toFixed(1) : "0.0"}%`;
+function compactEvidencePaths(obs: CompactObservation) {
+  const paths = [...(obs.crop_paths ?? [])];
+  if (obs.full_screenshot_path) paths.push(obs.full_screenshot_path);
+  return paths;
 }
 
 function formatRunLabel(runId: string) {
@@ -887,30 +451,51 @@ function formatRunLabel(runId: string) {
 }
 
 function orderRuns(runs: string[]) {
+  const rank = (runId: string) => {
+    const index = DEMO_RUN_ORDER.indexOf(runId);
+    return index === -1 ? DEMO_RUN_ORDER.length + 1 : index;
+  };
   return [...runs].sort((a, b) => {
-    const aRank = RUN_LABELS[a] ? 0 : 1;
-    const bRank = RUN_LABELS[b] ? 0 : 1;
-    if (aRank !== bRank) return aRank - bRank;
+    const rankDelta = rank(a) - rank(b);
+    if (rankDelta !== 0) return rankDelta;
     return formatRunLabel(a).localeCompare(formatRunLabel(b));
   });
 }
 
-function compactEvidencePaths(observation: CompactObservation) {
-  const paths = [...observation.crop_paths];
-  if (observation.full_screenshot_path) paths.push(observation.full_screenshot_path);
-  return paths;
+function describeAction(a?: BrowserAction | null): string {
+  if (!a) return "—";
+  const q = (v?: string | null) => (v ? `“${v}”` : "");
+  switch (a.type) {
+    case "click":
+      return `Click ${q(a.target) || "element"}`.trim();
+    case "type":
+      return `Type ${q(a.text)} into ${a.target ?? "field"}`.trim();
+    case "press":
+      return `Press ${a.key ?? ""}`.trim();
+    case "goto":
+      return `Go to ${a.url ?? ""}`.trim();
+    case "scroll":
+      return "Scroll the page";
+    case "wait":
+      return "Wait";
+    default:
+      return a.type;
+  }
 }
 
-function errorMessage(err: unknown) {
+async function loadRun(runId: string): Promise<RunDetail> {
+  const res = await fetch(`/api/runs/${encodeURIComponent(runId)}`);
+  if (!res.ok) throw new Error(`Failed to load ${runId}`);
+  return res.json();
+}
+
+function fileUrl(runId: string, path: string) {
+  const p = path.split("/").map(encodeURIComponent).join("/");
+  return `/api/runs/${encodeURIComponent(runId)}/files/${p}`;
+}
+
+function messageFrom(err: unknown) {
   return err instanceof Error ? err.message : String(err);
-}
-
-function runFileUrl(runId: string, path: string) {
-  const encodedPath = path
-    .split("/")
-    .map((part) => encodeURIComponent(part))
-    .join("/");
-  return `/api/runs/${encodeURIComponent(runId)}/files/${encodedPath}`;
 }
 
 createRoot(document.getElementById("root")!).render(<App />);
