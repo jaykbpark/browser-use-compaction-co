@@ -11,6 +11,7 @@ Reads the per-seed JSON reports written by ``scripts/run_browsergym_live.py``
 The aggregator never reads raw run artifacts; it only consumes the report JSON,
 so it can run from the base environment without the BrowserGym stack.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -151,8 +152,13 @@ def write_charts(agg: dict[str, Any], out_dir: Path) -> list[Path]:
     ax.set_title(f"MiniWoB success rate by mode ({agg['num_seeds']} seeds)")
     ax.set_ylim(0, max(m + e for m, e in zip(means, errs)) * 1.25 + 1)
     for bar, mean, err in zip(bars, means, errs):
-        ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + err + 0.8,
-                f"{mean:.1f}%", ha="center", va="bottom")
+        ax.text(
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height() + err + 0.8,
+            f"{mean:.1f}%",
+            ha="center",
+            va="bottom",
+        )
     fig.tight_layout()
     p = out_dir / "success_rate_bar.png"
     fig.savefig(p, dpi=150)
@@ -166,13 +172,17 @@ def write_charts(agg: dict[str, Any], out_dir: Path) -> list[Path]:
     bars = ax.bar(labels, means, yerr=errs, capsize=8, color=["#2b8cbe", "#888888"])
     ax.set_ylabel("Avg decision tokens / episode")
     ax.set_title(
-        f"MiniWoB token usage by mode "
-        f"(-{agg['token_reduction_pct']['mean']:.1f}% compact)"
+        f"MiniWoB token usage by mode (-{agg['token_reduction_pct']['mean']:.1f}% compact)"
     )
     ax.set_ylim(0, max(m + e for m, e in zip(means, errs)) * 1.2 + 1)
     for bar, mean, err in zip(bars, means, errs):
-        ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + err + 30,
-                f"{mean:.0f}", ha="center", va="bottom")
+        ax.text(
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height() + err + 30,
+            f"{mean:.0f}",
+            ha="center",
+            va="bottom",
+        )
     fig.tight_layout()
     p = out_dir / "token_usage_bar.png"
     fig.savefig(p, dpi=150)
@@ -197,8 +207,13 @@ def write_charts(agg: dict[str, Any], out_dir: Path) -> list[Path]:
     ax.set_title("Compact-vs-full_state outcome classes")
     ax.tick_params(axis="x", rotation=20)
     for bar, count in zip(bars, counts):
-        ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height(), str(count),
-                ha="center", va="bottom")
+        ax.text(
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height(),
+            str(count),
+            ha="center",
+            va="bottom",
+        )
     fig.tight_layout()
     p = out_dir / "failure_classes_bar.png"
     fig.savefig(p, dpi=150)
@@ -208,8 +223,9 @@ def write_charts(agg: dict[str, Any], out_dir: Path) -> list[Path]:
     return paths
 
 
-def write_markdown(agg: dict[str, Any], seeds: list[dict[str, Any]], out_dir: Path,
-                   subset_rule: str) -> Path:
+def write_markdown(
+    agg: dict[str, Any], seeds: list[dict[str, Any]], out_dir: Path, subset_rule: str
+) -> Path:
     def ms(d: dict[str, Any], scale: float = 1.0, unit: str = "") -> str:
         return f"{d['mean'] * scale:.2f}{unit} \u00b1 {d['std'] * scale:.2f}{unit}"
 
@@ -269,7 +285,9 @@ def write_markdown(agg: dict[str, Any], seeds: list[dict[str, Any]], out_dir: Pa
     lines.append("")
 
     lines.append("## Per-seed detail\n")
-    lines.append("| Seed | Tasks | compact succ | full_state succ | compact tok | full_state tok | reduction |")
+    lines.append(
+        "| Seed | Tasks | compact succ | full_state succ | compact tok | full_state tok | reduction |"
+    )
     lines.append("| --- | --- | --- | --- | --- | --- | --- |")
     for s in seeds:
         lines.append(
@@ -329,9 +347,7 @@ def main(argv: list[str] | None = None) -> int:
         "max_steps": 8,
         "subset_rule": args.subset_rule,
         "aggregate": agg,
-        "per_seed": [
-            {k: v for k, v in s.items() if k != "failure_table"} for s in seeds
-        ],
+        "per_seed": [{k: v for k, v in s.items() if k != "failure_table"} for s in seeds],
     }
     summary_path = args.out_dir / "summary.json"
     summary_path.write_text(json.dumps(summary, indent=2) + "\n")

@@ -200,7 +200,9 @@ def _diff_interactive_elements(
     return changes
 
 
-def _diff_element_fields(before: InteractiveElement, after: InteractiveElement) -> list[StructuralChange]:
+def _diff_element_fields(
+    before: InteractiveElement, after: InteractiveElement
+) -> list[StructuralChange]:
     changes: list[StructuralChange] = []
     for field in ("value", "disabled", "checked", "selected", "expanded"):
         before_value = getattr(before, field)
@@ -292,7 +294,9 @@ def _classify_events(
             )
         )
 
-    added_inputs = [element for element in added_elements if normalize_text(element.role) in INPUT_ROLES]
+    added_inputs = [
+        element for element in added_elements if normalize_text(element.role) in INPUT_ROLES
+    ]
     if len(added_inputs) >= 2:
         names = ", ".join(element.name or element.role for element in added_inputs[:4])
         events.append(
@@ -304,7 +308,9 @@ def _classify_events(
         )
 
     if any(change.type == "validation_error" for change in changes):
-        events.append(StructuralChange(type="form_error", detail="A form or validation error appeared"))
+        events.append(
+            StructuralChange(type="form_error", detail="A form or validation error appeared")
+        )
 
     if "url_changed" in changed:
         events.append(StructuralChange(type="navigation", detail="The page navigated"))

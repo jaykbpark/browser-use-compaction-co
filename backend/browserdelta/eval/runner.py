@@ -403,9 +403,8 @@ def _resolve_target_alias(
         return action
     for item in observation.interactive:
         if _target_ref_matches(action.target, item):
-            if (
-                expected_next_action
-                and _normalize(expected_next_action.target) == _normalize(item.ref)
+            if expected_next_action and _normalize(expected_next_action.target) == _normalize(
+                item.ref
             ):
                 return action.model_copy(update={"target": item.ref})
             label = _target_label(item)
