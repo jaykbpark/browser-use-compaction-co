@@ -73,16 +73,47 @@ type RunDetail = {
 
 type PageRoute = "setup" | "dashboard";
 
-const SETUP_COMMAND = `python3 -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
-python -m playwright install chromium
-npm --prefix viewer install
-browserdelta demo`;
+type InstallMethod = { id: string; label: string; command: string; note: string };
 
-const API_COMMAND = "browserdelta serve";
-const VIEWER_COMMAND = "npm --prefix viewer run dev -- --host 127.0.0.1 --port 5174";
+const INSTALL_METHODS: InstallMethod[] = [
+  {
+    id: "pipx",
+    label: "pipx",
+    command: "pipx install browserdelta",
+    note: "Recommended — installs the browserdelta CLI as an isolated global tool.",
+  },
+  {
+    id: "uvx",
+    label: "uvx",
+    command: "uvx browserdelta observe <run> --step 3 --format json",
+    note: "Zero-install — run it on demand with uv, nothing left behind.",
+  },
+  {
+    id: "pip",
+    label: "pip",
+    command: "pip install browserdelta",
+    note: "Drop it straight into an existing virtualenv.",
+  },
+  {
+    id: "source",
+    label: "from source",
+    command:
+      'git clone https://github.com/your-org/browserdelta\ncd browserdelta && pip install -e ".[dev]"\npython -m playwright install chromium',
+    note: "Run it today from this repo — no PyPI release required.",
+  },
+];
+
 const AGENT_COMMAND = "browserdelta observe local_checkout --step 3 --format json";
+
+const AGENT_OUTPUT = `{
+  "step": 3,
+  "route": "crop_with_context",
+  "summary": "Inventory chart updated.",
+  "tokens_estimate": 312,
+  "baseline_tokens_estimate": 4200,
+  "reduction_pct": 92.6,
+  "crop_paths": ["crops/step_003/crop_01.png"]
+}`;
 
 function App() {
   const [route, setRoute] = React.useState<PageRoute>(readRoute);
@@ -97,11 +128,12 @@ function App() {
 }
 
 function SetupPage() {
+  const [method, setMethod] = React.useState<InstallMethod>(INSTALL_METHODS[0]);
   const [copied, setCopied] = React.useState(false);
 
-  async function copySetup() {
+  async function copyCommand() {
     try {
-      await navigator.clipboard.writeText(SETUP_COMMAND);
+      await navigator.clipboard.writeText(method.command);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1600);
     } catch {
@@ -117,55 +149,77 @@ function SetupPage() {
         </div>
         <nav className="nav-links" aria-label="Pages">
           <a href="#setup" data-on="true">
-            Setup
+            Install
           </a>
-          <a href="#dashboard">Dashboard</a>
+          <a href="#dashboard">How it works</a>
         </nav>
       </header>
 
-      <section className="setup-hero">
-        <div>
-          <p className="eyebrow">CLI agent install</p>
-          <h1>Paste once. Get compact browser observations.</h1>
+      <section className="install-hero">
+        <p className="eyebrow">Drop-in context compressor for browser agents</p>
+        <h1>Install BrowserDelta in your CLI.</h1>
+        <p className="install-sub">
+          Replace repeated full screenshots with compact text diffs, visual crops, and a
+          fallback screenshot only when it is actually needed.
+        </p>
+
+        <div className="install-card">
+          <div className="install-tabs" role="tablist" aria-label="Install method">
+            {INSTALL_METHODS.map((m) => (
+              <button
+                key={m.id}
+                role="tab"
+                aria-selected={m.id === method.id}
+                data-on={m.id === method.id}
+                onClick={() => {
+                  setMethod(m);
+                  setCopied(false);
+                }}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+          <div className="install-cmd">
+            <pre>
+              {method.command.split("\n").map((line, i) => (
+                <span key={i}>
+                  <span className="prompt">$</span>
+                  {line}
+                </span>
+              ))}
+            </pre>
+            <button className="copy" onClick={copyCommand}>
+              {copied ? "Copied" : "Copy"}
+            </button>
+          </div>
+          <p className="install-note">{method.note}</p>
         </div>
-        <a className="launch-link" href="#dashboard">
-          Open dashboard
+
+        <a className="how-link" href="#dashboard">
+          See how it works →
         </a>
       </section>
 
-      <section className="setup-grid">
-        <article className="terminal-panel primary-terminal">
-          <header>
-            <span>1. Setup local demo data</span>
-            <button onClick={copySetup}>{copied ? "Copied" : "Copy"}</button>
-          </header>
-          <pre>{SETUP_COMMAND}</pre>
-        </article>
-
-        <article className="terminal-panel">
-          <header>
-            <span>2. Start API</span>
-          </header>
-          <pre>{API_COMMAND}</pre>
-        </article>
-
-        <article className="terminal-panel">
-          <header>
-            <span>3. Start viewer</span>
-          </header>
-          <pre>{VIEWER_COMMAND}</pre>
-        </article>
-
-        <article className="terminal-panel agent-panel">
-          <header>
-            <span>Agent call</span>
-          </header>
-          <pre>{AGENT_COMMAND}</pre>
+      <section className="usage">
+        <div className="usage-intro">
+          <h2>Then your agent calls it each step</h2>
           <p>
-            Your CLI agent shells out here after each browser action. It gets compact
-            JSON with the text delta, token estimate, and any crop screenshots.
+            After each browser action your CLI agent shells out instead of attaching a fresh
+            screenshot. It gets back the text delta, a token estimate, and any crop screenshots
+            of what changed.
           </p>
-        </article>
+        </div>
+        <div className="usage-io">
+          <div className="usage-block">
+            <span className="usage-label">call</span>
+            <pre>{AGENT_COMMAND}</pre>
+          </div>
+          <div className="usage-block">
+            <span className="usage-label">returns</span>
+            <pre>{AGENT_OUTPUT}</pre>
+          </div>
+        </div>
       </section>
 
       <section className="setup-strip">
@@ -263,9 +317,9 @@ function DashboardPage() {
         </div>
         <div className="bar-right">
           <nav className="nav-links" aria-label="Pages">
-            <a href="#setup">Setup</a>
+            <a href="#setup">Install</a>
             <a href="#dashboard" data-on="true">
-              Dashboard
+              How it works
             </a>
           </nav>
           {runs.length > 0 ? (
