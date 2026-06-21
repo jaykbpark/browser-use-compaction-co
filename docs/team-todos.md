@@ -54,7 +54,7 @@ Goal: turn raw step data into compact observations.
 - [ ] Make `llm_observation` terse and action-useful.
 - [ ] Include current interactive refs.
 - [ ] Include fallback hint when crop/full screenshot is needed.
-- [ ] Estimate baseline vs compact token count.
+- [x] Estimate baseline vs compact token count. (`scripts/eval_ab.py`)
 
 ## Shared
 

@@ -79,6 +79,27 @@ Run tests:
 pytest
 ```
 
+## A/B Eval
+
+Compare the naive baseline observation (full page state + a screenshot every
+step) against BrowserDelta compact observations and write `eval_report.json`:
+
+```bash
+# Evaluate runs already recorded under runs/
+python scripts/eval_ab.py --tasks tasks/docs_search.json tasks/shopping.json
+
+# Or record the runs live first (needs Playwright + network)
+python scripts/eval_ab.py --tasks tasks/docs_search.json tasks/shopping.json --record
+```
+
+For each step the report records: baseline vs compact **token estimate**, the
+**route used** (`structural` / `image_crop` / `vision_full` vs the baseline
+`full_state+screenshot`), whether the **predicted next action matches** the
+expected scripted action (element-grounding accuracy), and whether a **fallback
+was needed**. Per-task and overall summaries roll these up. The methodology
+(modeled on WebArena / Mind2Web style step accuracy + cost) is documented inline
+in the report.
+
 ## Browserbase Setup
 
 For local development, BrowserDelta falls back to a local Playwright Chromium

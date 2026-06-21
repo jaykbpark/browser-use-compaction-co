@@ -1,0 +1,425 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-06-21T00:30:48.194134+00:00",
+  "methodology": {
+    "baseline": "Full after-state (url, title, all text lines, all interactive elements) serialized as JSON, plus one screenshot per step.",
+    "compact": "BrowserDelta llm_observation text; a screenshot (crop or full) only when the codec routes to a vision fallback.",
+    "text_tokens": "chars / 4 (matches codec heuristic)",
+    "image_tokens": "OpenAI high-detail tiling: 85 base + 170 per 512px tile after scaling to <= 2048px long / <= 768px short side.",
+    "routes": {
+      "baseline": "full_state+screenshot",
+      "compact": {
+        "none": "structural",
+        "crop": "image_crop",
+        "full_screenshot": "vision_full"
+      }
+    },
+    "next_action_match": "A deterministic planner grounds the next scripted action against the elements visible in each observation. Target-bearing actions match only if the element survives into the observation; the compact strategy sees the first 12 interactive elements (the ones rendered into llm_observation). Actions without a DOM target are always executable."
+  },
+  "config": {
+    "chars_per_token": 4,
+    "image_base_tokens": 85,
+    "image_tile_tokens": 170,
+    "image_tile_px": 512,
+    "image_max_long_px": 2048,
+    "image_min_short_px": 768,
+    "compact_text_interactive_limit": 12
+  },
+  "tasks": [
+    {
+      "task_id": "docs_search",
+      "goal": "Open a documentation page and use keyboard navigation/search-like actions.",
+      "run_path": "runs/docs_search",
+      "steps": [
+        {
+          "step": 1,
+          "action": {
+            "type": "wait",
+            "amount": 500,
+            "metadata": {}
+          },
+          "action_ok": true,
+          "route_baseline": "full_state+screenshot",
+          "route_compact": "structural",
+          "fallback_needed": false,
+          "visual_changed_pct": 0.0,
+          "tokens_baseline": {
+            "text": 146,
+            "image": 1105,
+            "total": 1251
+          },
+          "tokens_compact": {
+            "text": 23,
+            "image": 0,
+            "total": 23
+          },
+          "token_savings_pct": 98.16,
+          "next_action_eval": {
+            "expected_action": {
+              "type": "press",
+              "key": "Tab",
+              "metadata": {}
+            },
+            "needs_grounding": false,
+            "baseline": {
+              "predicted": {
+                "type": "press",
+                "key": "Tab",
+                "metadata": {}
+              },
+              "match": true,
+              "grounded": true
+            },
+            "compact": {
+              "predicted": {
+                "type": "press",
+                "key": "Tab",
+                "metadata": {}
+              },
+              "match": true,
+              "grounded": true
+            }
+          }
+        },
+        {
+          "step": 2,
+          "action": {
+            "type": "press",
+            "key": "Tab",
+            "metadata": {}
+          },
+          "action_ok": true,
+          "route_baseline": "full_state+screenshot",
+          "route_compact": "structural",
+          "fallback_needed": false,
+          "visual_changed_pct": 0.044,
+          "tokens_baseline": {
+            "text": 146,
+            "image": 1105,
+            "total": 1251
+          },
+          "tokens_compact": {
+            "text": 28,
+            "image": 0,
+            "total": 28
+          },
+          "token_savings_pct": 97.76,
+          "next_action_eval": {
+            "expected_action": {
+              "type": "press",
+              "key": "Enter",
+              "metadata": {}
+            },
+            "needs_grounding": false,
+            "baseline": {
+              "predicted": {
+                "type": "press",
+                "key": "Enter",
+                "metadata": {}
+              },
+              "match": true,
+              "grounded": true
+            },
+            "compact": {
+              "predicted": {
+                "type": "press",
+                "key": "Enter",
+                "metadata": {}
+              },
+              "match": true,
+              "grounded": true
+            }
+          }
+        },
+        {
+          "step": 3,
+          "action": {
+            "type": "press",
+            "key": "Enter",
+            "metadata": {}
+          },
+          "action_ok": true,
+          "route_baseline": "full_state+screenshot",
+          "route_compact": "structural",
+          "fallback_needed": false,
+          "visual_changed_pct": 1.05,
+          "tokens_baseline": {
+            "text": 2352,
+            "image": 1105,
+            "total": 3457
+          },
+          "tokens_compact": {
+            "text": 139,
+            "image": 0,
+            "total": 139
+          },
+          "token_savings_pct": 95.98,
+          "next_action_eval": null
+        }
+      ],
+      "summary": {
+        "n_steps": 3,
+        "tokens": {
+          "baseline_total": 5959,
+          "compact_total": 190,
+          "savings_pct": 96.81,
+          "compression_ratio": 31.36
+        },
+        "routes_compact": {
+          "structural": 3
+        },
+        "fallback": {
+          "steps_with_fallback": 0,
+          "fallback_rate": 0.0
+        },
+        "next_action": {
+          "n_samples": 2,
+          "n_grounding_samples": 0,
+          "baseline_accuracy": null,
+          "compact_accuracy": null,
+          "agreement_rate": null
+        }
+      }
+    },
+    {
+      "task_id": "shopping",
+      "goal": "Search for a product and add a visible result to cart.",
+      "run_path": "runs/shopping",
+      "steps": [
+        {
+          "step": 1,
+          "action": {
+            "type": "type",
+            "target": "Username",
+            "text": "standard_user",
+            "metadata": {}
+          },
+          "action_ok": true,
+          "route_baseline": "full_state+screenshot",
+          "route_compact": "structural",
+          "fallback_needed": false,
+          "visual_changed_pct": 0.037,
+          "tokens_baseline": {
+            "text": 294,
+            "image": 1105,
+            "total": 1399
+          },
+          "tokens_compact": {
+            "text": 48,
+            "image": 0,
+            "total": 48
+          },
+          "token_savings_pct": 96.57,
+          "next_action_eval": {
+            "expected_action": {
+              "type": "type",
+              "target": "Password",
+              "text": "secret_sauce",
+              "metadata": {}
+            },
+            "needs_grounding": true,
+            "baseline": {
+              "predicted": {
+                "type": "type",
+                "target": "Password",
+                "text": "secret_sauce",
+                "metadata": {},
+                "resolved_ref": "e2"
+              },
+              "match": true,
+              "grounded": true
+            },
+            "compact": {
+              "predicted": {
+                "type": "type",
+                "target": "Password",
+                "text": "secret_sauce",
+                "metadata": {},
+                "resolved_ref": "e2"
+              },
+              "match": true,
+              "grounded": true
+            }
+          }
+        },
+        {
+          "step": 2,
+          "action": {
+            "type": "type",
+            "target": "Password",
+            "text": "secret_sauce",
+            "metadata": {}
+          },
+          "action_ok": true,
+          "route_baseline": "full_state+screenshot",
+          "route_compact": "structural",
+          "fallback_needed": false,
+          "visual_changed_pct": 0.027,
+          "tokens_baseline": {
+            "text": 297,
+            "image": 1105,
+            "total": 1402
+          },
+          "tokens_compact": {
+            "text": 48,
+            "image": 0,
+            "total": 48
+          },
+          "token_savings_pct": 96.58,
+          "next_action_eval": {
+            "expected_action": {
+              "type": "click",
+              "target": "Login",
+              "metadata": {}
+            },
+            "needs_grounding": true,
+            "baseline": {
+              "predicted": {
+                "type": "click",
+                "target": "Login",
+                "metadata": {},
+                "resolved_ref": "e3"
+              },
+              "match": true,
+              "grounded": true
+            },
+            "compact": {
+              "predicted": {
+                "type": "click",
+                "target": "Login",
+                "metadata": {},
+                "resolved_ref": "e3"
+              },
+              "match": true,
+              "grounded": true
+            }
+          }
+        },
+        {
+          "step": 3,
+          "action": {
+            "type": "click",
+            "target": "Login",
+            "metadata": {}
+          },
+          "action_ok": true,
+          "route_baseline": "full_state+screenshot",
+          "route_compact": "image_crop",
+          "fallback_needed": true,
+          "visual_changed_pct": 28.654,
+          "tokens_baseline": {
+            "text": 2522,
+            "image": 1105,
+            "total": 3627
+          },
+          "tokens_compact": {
+            "text": 149,
+            "image": 2040,
+            "total": 2189
+          },
+          "token_savings_pct": 39.65,
+          "next_action_eval": {
+            "expected_action": {
+              "type": "click",
+              "target": "Add to cart",
+              "metadata": {}
+            },
+            "needs_grounding": true,
+            "baseline": {
+              "predicted": {
+                "type": "click",
+                "target": "Add to cart",
+                "metadata": {},
+                "resolved_ref": "e11"
+              },
+              "match": true,
+              "grounded": true
+            },
+            "compact": {
+              "predicted": {
+                "type": "click",
+                "target": "Add to cart",
+                "metadata": {},
+                "resolved_ref": "e11"
+              },
+              "match": true,
+              "grounded": true
+            }
+          }
+        },
+        {
+          "step": 4,
+          "action": {
+            "type": "click",
+            "target": "Add to cart",
+            "metadata": {}
+          },
+          "action_ok": true,
+          "route_baseline": "full_state+screenshot",
+          "route_compact": "structural",
+          "fallback_needed": false,
+          "visual_changed_pct": 0.117,
+          "tokens_baseline": {
+            "text": 2519,
+            "image": 1105,
+            "total": 3624
+          },
+          "tokens_compact": {
+            "text": 102,
+            "image": 0,
+            "total": 102
+          },
+          "token_savings_pct": 97.19,
+          "next_action_eval": null
+        }
+      ],
+      "summary": {
+        "n_steps": 4,
+        "tokens": {
+          "baseline_total": 10052,
+          "compact_total": 2387,
+          "savings_pct": 76.25,
+          "compression_ratio": 4.21
+        },
+        "routes_compact": {
+          "structural": 3,
+          "image_crop": 1
+        },
+        "fallback": {
+          "steps_with_fallback": 1,
+          "fallback_rate": 0.25
+        },
+        "next_action": {
+          "n_samples": 3,
+          "n_grounding_samples": 3,
+          "baseline_accuracy": 1.0,
+          "compact_accuracy": 1.0,
+          "agreement_rate": 1.0
+        }
+      }
+    }
+  ],
+  "overall_summary": {
+    "n_tasks": 2,
+    "n_steps": 7,
+    "tokens": {
+      "baseline_total": 16011,
+      "compact_total": 2577,
+      "savings_pct": 83.9,
+      "compression_ratio": 6.21
+    },
+    "routes_compact": {
+      "structural": 6,
+      "image_crop": 1
+    },
+    "fallback": {
+      "steps_with_fallback": 1,
+      "fallback_rate": 0.143
+    },
+    "next_action": {
+      "n_grounding_samples": 3,
+      "baseline_accuracy": 1.0,
+      "compact_accuracy": 1.0
+    }
+  }
+}
